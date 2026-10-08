@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum CheckStatus {
+  SUCCESS
+  FAILURE
+  TIMEOUT
+}
+
+enum IncidentStatus {
+  OPEN
+  RESOLVED
+}
+
+model Endpoint {
+  id                   String        @id @default(cuid())
+  name                 String
+  url                  String
+  enabled              Boolean       @default(true)
+  expectedStatusCode   Int           @default(200)
+  timeoutMs            Int           @default(5000)
+  checkIntervalMinutes Int           @default(5)
+  lastCheckedAt        DateTime?     @db.Timestamptz(3)
+  createdAt            DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime      @updatedAt @db.Timestamptz(3)
+  checkResults         CheckResult[]
+  incidents            Incident[]
+
+  @@index([enabled, lastCheckedAt])
+}
+
+model CheckResult {
+  id                 String      @id @default(cuid())
+  endpointId         String
+  endpoint           Endpoint    @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  checkedAt          DateTime    @db.Timestamptz(3)
+  responseTimeMs     Int?
+  statusCode         Int?
+  status             CheckStatus
+  failureReason      String?
+  createdAt          DateTime    @default(now()) @db.Timestamptz(3)
+  incidentsStarted   Incident[]  @relation("FirstFailedCheck")
+  incidentsRecovered Incident[]  @relation("RecoveryCheck")
+
+  @@index([endpointId, checkedAt])
+}
+
+model Incident {
+  id                 String         @id @default(cuid())
+  endpointId         String
+  endpoint           Endpoint       @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  startedAt          DateTime       @db.Timestamptz(3)
+  resolvedAt         DateTime?      @db.Timestamptz(3)
+  status             IncidentStatus @default(OPEN)
+  cause              String
+  firstFailedCheckId String
+  firstFailedCheck   CheckResult    @relation("FirstFailedCheck", fields: [firstFailedCheckId], references: [id], onDelete: Restrict)
+  recoveryCheckId    String?
+  recoveryCheck      CheckResult?   @relation("RecoveryCheck", fields: [recoveryCheckId], references: [id], onDelete: Restrict)
+  createdAt          DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime       @updatedAt @db.Timestamptz(3)
+
+  @@index([endpointId, status])
+  @@index([endpointId, startedAt])
+}
