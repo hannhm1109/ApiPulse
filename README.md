@@ -2,10 +2,11 @@
 
 API Pulse periodically checks HTTP endpoints and tracks uptime, latency, incidents, and recoveries.
 
-Current phase: project and database foundation.
+Current phase: monitoring engine.
 
 - [Phase 0: Architecture](docs/phase-0-architecture.md)
 - [Phase 1: Project and database foundation](docs/phase-1-foundation.md)
+- [Phase 2: Monitoring engine](docs/phase-2-monitoring.md)
 
 ## Stack
 
@@ -56,12 +57,33 @@ relationships; they are not real monitoring observations. The sample URLs use
 reserved `example.com` subdomains and are not working demo APIs.
 
 The seed uses fixed IDs and inserts missing records. Running it again does not
-duplicate data or reset existing records. Monitoring execution, incident
-processing, and scheduling are implemented in later phases.
+duplicate data or reset existing records. Incident processing and scheduling
+are implemented in later phases.
+
+## Manual Monitoring
+
+Create an enabled endpoint in Prisma Studio, copy its ID, and run:
+
+```powershell
+npm run check:endpoint -- YOUR_ENDPOINT_ID
+```
+
+The command executes one GET request, evaluates the configured status, and
+saves a CheckResult with the endpoint's `lastCheckedAt` in one transaction.
+It enforces a timeout, disables caching and redirects, and applies initial
+URL/IP guardrails. Latency measures time from check start to response headers,
+including DNS validation. Response bodies are not inspected.
+
+The JSON output can report SUCCESS, FAILURE, or TIMEOUT. A recorded target
+failure is a successful monitoring operation; an internal execution or
+database error causes a nonzero command exit. Manual checks do not process
+incidents yet. See the [Phase 2 guide](docs/phase-2-monitoring.md) for details
+and SSRF limitations.
 
 ## Verification
 
 ```powershell
+npm test
 npm run db:validate
 npm run lint
 npm run typecheck
@@ -70,4 +92,7 @@ npm run build
 
 Database checks additionally require a running PostgreSQL instance. See the
 [Phase 1 guide](docs/phase-1-foundation.md) for the migration and seed checks.
+Monitoring unit and native HTTP tests run without a database or internet.
+The [Phase 2 guide](docs/phase-2-monitoring.md) documents the separate PostgreSQL
+integration suite (`npm run test:db`) and its setup.
 

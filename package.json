@@ -10,6 +10,11 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "prisma generate && next typegen && tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:db:prepare": "prisma migrate deploy --config prisma.test.config.ts",
+    "test:db": "vitest run --config vitest.database.config.ts",
+    "check:endpoint": "node --conditions=react-server --import tsx scripts/check-endpoint.ts",
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",
     "db:generate": "prisma generate",
@@ -23,6 +28,7 @@
     "@prisma/adapter-pg": "7.10.0",
     "@prisma/client": "7.10.0",
     "dotenv": "^17.0.0",
+    "ipaddr.js": "2.5.0",
     "next": "16.4.0",
     "pg": "^8.16.0",
     "react": "19.3.0",
@@ -40,6 +46,7 @@
     "prisma": "7.10.0",
     "tailwindcss": "4.3.3",
     "tsx": "^4.20.0",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "5.0.3"
   }
 }
