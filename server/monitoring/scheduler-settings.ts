@@ -1,0 +1,4 @@
+export const SCHEDULER_BATCH_SIZE = 20;
+export const SCHEDULER_CONCURRENCY = 5;
+export const CHECK_CLAIM_DURATION_MS = 5 * 60_000;
+export const MAX_SCHEDULED_TIMEOUT_MS = 30_000;

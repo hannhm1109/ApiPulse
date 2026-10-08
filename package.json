@@ -15,6 +15,8 @@
     "test:db:prepare": "prisma migrate deploy --config prisma.test.config.ts",
     "test:db": "vitest run --config vitest.database.config.ts",
     "check:endpoint": "node --conditions=react-server --import tsx scripts/check-endpoint.ts",
+    "checks:run": "node --conditions=react-server --import tsx scripts/run-scheduler.ts",
+    "checks:watch": "node --conditions=react-server --import tsx scripts/run-scheduler.ts --watch",
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",
     "db:generate": "prisma generate",

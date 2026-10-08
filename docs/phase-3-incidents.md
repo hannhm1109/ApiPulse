@@ -1,5 +1,8 @@
 # Phase 3: Incident Lifecycle
 
+This guide records the Phase 3 implementation. Phase 4 adds scheduling and
+expiring claims; see the [scheduling guide](phase-4-scheduling.md).
+
 ## What Was Built
 
 Each recorded check now updates incident state using the fixed policy chosen

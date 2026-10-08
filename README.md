@@ -2,12 +2,13 @@
 
 API Pulse periodically checks HTTP endpoints and tracks uptime, latency, incidents, and recoveries.
 
-Current phase: incident lifecycle.
+Current phase: scheduling.
 
 - [Phase 0: Architecture](docs/phase-0-architecture.md)
 - [Phase 1: Project and database foundation](docs/phase-1-foundation.md)
 - [Phase 2: Monitoring engine](docs/phase-2-monitoring.md)
 - [Phase 3: Incident lifecycle](docs/phase-3-incidents.md)
+- [Phase 4: Scheduling](docs/phase-4-scheduling.md)
 
 ## Stack
 
@@ -58,8 +59,7 @@ relationships; they are not real monitoring observations. The sample URLs use
 reserved `example.com` subdomains and are not working demo APIs.
 
 The seed uses fixed IDs and inserts missing records. Running it again does not
-duplicate data or reset existing records. Scheduling is implemented in a later
-phase.
+duplicate data or reset existing records.
 
 ## Manual Monitoring
 
@@ -95,6 +95,36 @@ overriding newer incident state or moving `lastCheckedAt` backward.
 Apply the latest migration with `npm run db:deploy`. The
 [Phase 3 guide](docs/phase-3-incidents.md) explains the rules and how to test
 failure, repeated failure, recovery, and a new unhealthy period.
+
+## Scheduling
+
+Run one due-endpoint batch, or keep a local minute-based timer running:
+
+```powershell
+npm run checks:run
+npm run checks:watch
+```
+
+The watch command runs immediately, then at minute boundaries, independently
+of page views. It processes up to 20 due endpoints with at most five concurrent
+checks per invocation. Ctrl+C stops future ticks after the current batch finishes.
+Scheduled endpoint timeouts must be between 1 and 30000 milliseconds.
+
+`GET /api/cron/checks` runs the same scheduler and requires
+`Authorization: Bearer <CRON_SECRET>`. Configure a random secret of at least
+16 characters in `.env` or the hosting environment. Missing secret
+configuration returns 503; invalid authorization returns 401. The endpoint
+does not accept URLs or settings from the request.
+
+The scheduler uses expiring database claims without changing `lastCheckedAt`
+until a result is recorded. Overlapping invocations cannot claim the same
+active lease, and a replaced owner cannot commit a stale result.
+
+`vercel.cron.example.json` shows a minute-based deployment schedule. Vercel
+Hobby allows only daily cron jobs; this example needs Pro/Enterprise or a
+different external timer calling the protected route. No deployment is
+activated by the example file. See the
+[Phase 4 guide](docs/phase-4-scheduling.md) for setup, tests, and limitations.
 
 ## Verification
 
