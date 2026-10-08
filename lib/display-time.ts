@@ -28,3 +28,9 @@ export function relativeTime(timestamp: string, reference: string): string {
 export function utcTime(timestamp: string): string {
   return new Date(timestamp).toLocaleTimeString("en-GB", { timeZone: "UTC", hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
+
+export function utcDateTime(timestamp: string): string {
+  return new Date(timestamp).toLocaleString("en-GB", {
+    timeZone: "UTC", day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+  });
+}

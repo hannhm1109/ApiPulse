@@ -3,12 +3,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { AlertCircle, ArrowUpRight, CheckCircle2, Circle, Clock3, Layers2, Plus, Radio, RefreshCw, Search, X } from "lucide-react";
-import type { DashboardData, HealthState } from "../../server/dashboard/types";
+import { AlertCircle, ArrowUpRight, CheckCircle2, Layers2, Plus, Radio, RefreshCw, Search, X } from "lucide-react";
+import type { DashboardData } from "../../server/dashboard/types";
 import { formatDuration, relativeTime, utcTime } from "../../lib/display-time";
 import { CheckHistory } from "./check-history";
-
-const healthLabels: Record<HealthState, string> = { UP: "Up", DOWN: "Down", PENDING: "Pending", STALE: "Stale", DISABLED: "Disabled", UNKNOWN: "Unknown" };
+import { HealthBadge, healthLabels } from "../health-badge";
 
 export function DashboardView({ data }: { data: DashboardData }) {
   const [search, setSearch] = useState("");
@@ -46,7 +45,7 @@ export function DashboardView({ data }: { data: DashboardData }) {
       {data.incidents.length ? <ul className="active-incident-list">
         {data.incidents.map(incident => <li key={incident.id}>
           <AlertCircle size={17} className="incident-icon" aria-hidden="true" />
-          <div className="incident-identity"><Link href={`/endpoints/${incident.endpointId}/edit`} className="endpoint-name">{incident.endpointName}</Link>
+          <div className="incident-identity"><Link href={`/endpoints/${incident.endpointId}`} className="endpoint-name">{incident.endpointName}</Link>
             <p className="incident-cause">{incident.cause}</p>
           </div>
           {!incident.enabled && <span className="incident-disabled">Monitoring disabled</span>}
@@ -76,7 +75,7 @@ export function DashboardView({ data }: { data: DashboardData }) {
         <thead><tr><th scope="col">Endpoint</th><th scope="col">Status</th><th scope="col">Latency</th><th scope="col">Last checked</th><th scope="col">Recent checks</th><th scope="col"><span className="sr-only">Settings</span></th></tr></thead>
         <tbody>{endpoints.map(endpoint => <tr key={endpoint.id}>
           <th scope="row" className="endpoint-identity"><div className="endpoint-name-line"><span className="method-badge">GET</span>
-            <Link href={`/endpoints/${endpoint.id}/edit`} className="endpoint-name">{endpoint.name}</Link></div><span className="endpoint-url mono">{endpoint.url}</span>
+            <Link href={`/endpoints/${endpoint.id}`} className="endpoint-name">{endpoint.name}</Link></div><span className="endpoint-url mono">{endpoint.url}</span>
           </th>
           <td><span className="mobile-label">Status</span><HealthBadge health={endpoint.health} /></td>
           <td><span className="mobile-label">Latency</span><span className="numeric" title={endpoint.latencyMs == null ? "No response timing" : undefined}>
@@ -96,9 +95,4 @@ export function DashboardView({ data }: { data: DashboardData }) {
       </div>}
     </section>
   </>;
-}
-
-function HealthBadge({ health }: { health: HealthState }) {
-  const Icon = health === "UP" ? CheckCircle2 : health === "DOWN" ? AlertCircle : health === "STALE" ? Clock3 : Circle;
-  return <span className={`health-badge health-${health.toLowerCase()}`}><Icon size={13} aria-hidden="true" />{healthLabels[health]}</span>;
 }

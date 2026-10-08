@@ -42,7 +42,7 @@ export function EndpointList({ endpoints }: { endpoints: EndpointListItem[] }) {
         <thead><tr><th scope="col">Endpoint</th><th scope="col">Expected</th><th scope="col">Timeout</th><th scope="col">Interval</th><th scope="col">Monitoring</th><th scope="col"><span className="sr-only">Actions</span></th></tr></thead>
         <tbody>{filtered.map(endpoint => <tr key={endpoint.id}>
           <th scope="row" className="endpoint-identity">
-            <div className="endpoint-name-line"><span className="method-badge">GET</span><Link href={`/endpoints/${endpoint.id}/edit`} className="endpoint-name">{endpoint.name}</Link></div>
+            <div className="endpoint-name-line"><span className="method-badge">GET</span><Link href={`/endpoints/${endpoint.id}`} className="endpoint-name">{endpoint.name}</Link></div>
             <span className="endpoint-url mono">{endpoint.url}</span>
           </th>
           <td><span className="mobile-label">Expected</span><span className="status-code mono">{endpoint.expectedStatusCode}</span></td>

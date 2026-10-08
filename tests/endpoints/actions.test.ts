@@ -22,7 +22,7 @@ describe("endpoint server actions", () => {
   it("revalidates after a save and lets redirect control flow escape", async () => {
     mocks.save.mockResolvedValue({ ok: true, id: "endpoint" });
     await expect(saveEndpointAction(null, {}, new FormData())).rejects.toThrow("NEXT_REDIRECT");
-    expect(mocks.revalidate.mock.calls).toEqual([["/"], ["/dashboard"], ["/endpoints/endpoint/edit"]]);
+    expect(mocks.revalidate.mock.calls).toEqual([["/"], ["/dashboard"], ["/endpoints/endpoint"], ["/endpoints/endpoint/edit"]]);
     expect(mocks.redirect).toHaveBeenCalledWith("/");
   });
   it("passes the edit ID and only extracted configuration to the service", async () => {
@@ -46,6 +46,7 @@ describe("endpoint server actions", () => {
     expect(mocks.toggle).toHaveBeenCalledWith({}, "endpoint", false);
     expect(mocks.revalidate).toHaveBeenCalledWith("/");
     expect(mocks.revalidate).toHaveBeenCalledWith("/dashboard");
+    expect(mocks.revalidate).toHaveBeenCalledWith("/endpoints/endpoint");
   });
   it("does not revalidate a missing endpoint", async () => {
     mocks.toggle.mockResolvedValue({ ok: false, message: "not found" });

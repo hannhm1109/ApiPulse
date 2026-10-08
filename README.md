@@ -2,7 +2,7 @@
 
 API Pulse periodically checks HTTP endpoints and tracks uptime, latency, incidents, and recoveries.
 
-Current phase: dashboard.
+Current phase: endpoint detail and historical metrics.
 
 - [Phase 0: Architecture](docs/phase-0-architecture.md)
 - [Phase 1: Project and database foundation](docs/phase-1-foundation.md)
@@ -11,10 +11,11 @@ Current phase: dashboard.
 - [Phase 4: Scheduling](docs/phase-4-scheduling.md)
 - [Phase 5: Endpoint management](docs/phase-5-endpoint-management.md)
 - [Phase 6: Dashboard](docs/phase-6-dashboard.md)
+- [Phase 7: Endpoint detail](docs/phase-7-endpoint-detail.md)
 
 ## Stack
 
-Next.js App Router, React, TypeScript, Tailwind CSS, Prisma 7, and PostgreSQL.
+Next.js App Router, React, TypeScript, Tailwind CSS, Prisma 7, PostgreSQL, and uPlot.
 
 ## Local Setup
 
@@ -34,8 +35,9 @@ npm run dev
 Open http://localhost:3000 for the endpoint list. Create, edit, and enable or
 disable endpoints there. Open http://localhost:3000/dashboard for observed
 health, latest response timings, recent check status, and active incidents.
-Full historical records can still be inspected with `npm run db:studio`
-until the endpoint detail views are built.
+Click an endpoint name to open its health overview, check-based uptime,
+response latency chart, check history, and incident history. Settings remain
+available through the edit controls and the detail page's Settings link.
 
 Management currently has no authentication. Keep this phase on a trusted local
 machine; do not expose its pages or Server Actions publicly. Cron bearer
@@ -122,6 +124,26 @@ The dashboard is a database snapshot. Its refresh button reloads saved data;
 it never executes checks or starts a timer. Run `checks:watch` separately for
 periodic monitoring. See the [Phase 6 guide](docs/phase-6-dashboard.md) for
 rules, consistency, tests, and limitations.
+
+## Endpoint Detail
+
+`/endpoints/<id>` shows current observed health alongside historical metrics.
+Choose a rolling 24-hour, 7-day (default), or 30-day window. Check-based uptime
+is successful checks / all completed checks in that window, including failures
+and timeouts. No checks means unknown uptime, not 0% or 100%. This is sampled
+health, not continuous uptime or a time-weighted SLA.
+
+Average response timing includes real HTTP responses, including unexpected
+status codes, but excludes response-less timeout/network durations. The chart
+shows up to 200 recent actual observations at their UTC timestamps, with gaps
+for nonresponses. Metrics use the full selected window, not the chart subset
+or displayed check page. Checks and all-time incidents have 25-row pages.
+Resolved incident durations stop at recovery; open durations use the snapshot
+time. Disabled monitoring retains historical observations and open incidents.
+
+Viewing, changing periods, and refreshing only read saved data. No new checks
+or demo observations are created. See the [Phase 7 guide](docs/phase-7-endpoint-detail.md)
+for exact rules, tests, and interview concepts.
 
 ## Incident Lifecycle
 
