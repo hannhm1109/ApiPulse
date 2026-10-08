@@ -1,15 +1,19 @@
-export default function Home() {
+import Link from "next/link";
+import { Plus } from "lucide-react";
+import { prisma } from "../server/db/prisma";
+import { listEndpoints } from "../server/endpoints/endpoint-service";
+import { EndpointList } from "../components/endpoints/endpoint-list";
+
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const endpoints = await listEndpoints(prisma);
   return (
-    <main className="mx-auto min-h-screen max-w-6xl px-6 py-10 sm:px-10">
-      <header className="border-b border-zinc-200 pb-6">
-        <h1 className="text-2xl font-semibold text-zinc-950">API Pulse</h1>
-      </header>
-      <section className="py-10" aria-labelledby="endpoints-heading">
-        <h2 id="endpoints-heading" className="text-lg font-medium text-zinc-900">
-          Endpoints
-        </h2>
-        <p className="mt-3 text-sm text-zinc-500">Monitoring has not started.</p>
-      </section>
+    <main className="page-container" id="main-content">
+      <div className="page-heading"><div className="heading-with-count"><h1>Endpoints</h1><span className="heading-count">{endpoints.length}</span></div>
+        <Link href="/endpoints/new" className="button button-primary"><Plus size={17} aria-hidden="true" />Add endpoint</Link>
+      </div>
+      <EndpointList endpoints={endpoints} />
     </main>
   );
 }

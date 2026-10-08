@@ -2,13 +2,14 @@
 
 API Pulse periodically checks HTTP endpoints and tracks uptime, latency, incidents, and recoveries.
 
-Current phase: scheduling.
+Current phase: endpoint management.
 
 - [Phase 0: Architecture](docs/phase-0-architecture.md)
 - [Phase 1: Project and database foundation](docs/phase-1-foundation.md)
 - [Phase 2: Monitoring engine](docs/phase-2-monitoring.md)
 - [Phase 3: Incident lifecycle](docs/phase-3-incidents.md)
 - [Phase 4: Scheduling](docs/phase-4-scheduling.md)
+- [Phase 5: Endpoint management](docs/phase-5-endpoint-management.md)
 
 ## Stack
 
@@ -29,8 +30,13 @@ npm run db:seed
 npm run dev
 ```
 
-Open http://localhost:3000. The initial page is an app shell; inspect the
-database records with `npm run db:studio`.
+Open http://localhost:3000 for the endpoint list. Create, edit, and enable or
+disable endpoints there. Historical records can still be inspected with
+`npm run db:studio` until the dashboard and detail views are built.
+
+Management currently has no authentication. Keep this phase on a trusted local
+machine; do not expose its pages or Server Actions publicly. Cron bearer
+authentication does not protect management access.
 
 Docker exposes PostgreSQL on localhost port 5433 to avoid the usual 5432 port.
 The credentials in `.env.example` and `compose.yaml` are for local development.
@@ -63,7 +69,7 @@ duplicate data or reset existing records.
 
 ## Manual Monitoring
 
-Create an enabled endpoint in Prisma Studio, copy its ID, and run:
+Create an endpoint in the management UI, copy its ID from the edit URL, and run:
 
 ```powershell
 npm run check:endpoint -- YOUR_ENDPOINT_ID
@@ -79,6 +85,22 @@ The JSON output can report SUCCESS, FAILURE, or TIMEOUT. A recorded target
 failure is a successful monitoring operation; an internal execution or
 database error causes a nonzero command exit. See the
 [Phase 2 guide](docs/phase-2-monitoring.md) for HTTP details and SSRF limitations.
+
+## Endpoint Management
+
+The list supports search by name/URL, monitoring filters, settings links, and
+enable/disable switches. Create and edit forms validate configuration on the
+server and keep entered values when validation fails.
+
+Name is limited to 80 characters, URL to 2048, expected status to 100-599,
+timeout to 1-30000 ms, and interval to 1-1440 minutes. Numeric settings must be
+whole numbers. Credentials, fragments, and obvious local/private destinations
+are rejected; DNS/IP checks still run before every monitoring request.
+
+Edits retain history and lastCheckedAt. Saving settings or disabling an
+endpoint invalidates its active scheduler claim; old scheduled work cannot
+persist after that change. Disabling is not a recovery and does not resolve
+an incident. See the [Phase 5 guide](docs/phase-5-endpoint-management.md).
 
 ## Incident Lifecycle
 
@@ -142,4 +164,17 @@ Monitoring unit and native HTTP tests run without a database or internet.
 Incident policy tests are included in the same `npm test` command.
 The [Phase 2 guide](docs/phase-2-monitoring.md) documents the separate PostgreSQL
 integration suite (`npm run test:db`) and its setup.
+
+Browser tests require a migrated, empty dedicated test database and Chromium:
+
+```powershell
+$env:TEST_DATABASE_URL = "postgresql://apipulse:apipulse@localhost:5433/apipulse_test"
+npm run test:db:prepare
+npx playwright install chromium
+npm run test:ui
+```
+
+Do not seed the browser test database. These tests start their own production
+server on localhost port 3100 and stop it afterward. They must not run alongside
+other tests or a scheduler using the same test database.
 

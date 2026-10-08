@@ -14,6 +14,7 @@
     "test:watch": "vitest",
     "test:db:prepare": "prisma migrate deploy --config prisma.test.config.ts",
     "test:db": "vitest run --config vitest.database.config.ts",
+    "test:ui": "npm run build && playwright test",
     "check:endpoint": "node --conditions=react-server --import tsx scripts/check-endpoint.ts",
     "checks:run": "node --conditions=react-server --import tsx scripts/run-scheduler.ts",
     "checks:watch": "node --conditions=react-server --import tsx scripts/run-scheduler.ts --watch",
@@ -31,13 +32,16 @@
     "@prisma/client": "7.10.0",
     "dotenv": "^17.0.0",
     "ipaddr.js": "2.5.0",
+    "lucide-react": "1.53.0",
     "next": "16.4.0",
     "pg": "^8.16.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "server-only": "^0.0.1"
+    "server-only": "^0.0.1",
+    "zod": "4.6.5"
   },
   "devDependencies": {
+    "@playwright/test": "1.64.0",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "^24.0.0",
     "@types/pg": "^8.15.0",
