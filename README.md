@@ -2,7 +2,7 @@
 
 API Pulse periodically checks HTTP endpoints and tracks uptime, latency, incidents, and recoveries.
 
-Current phase: endpoint management.
+Current phase: dashboard.
 
 - [Phase 0: Architecture](docs/phase-0-architecture.md)
 - [Phase 1: Project and database foundation](docs/phase-1-foundation.md)
@@ -10,6 +10,7 @@ Current phase: endpoint management.
 - [Phase 3: Incident lifecycle](docs/phase-3-incidents.md)
 - [Phase 4: Scheduling](docs/phase-4-scheduling.md)
 - [Phase 5: Endpoint management](docs/phase-5-endpoint-management.md)
+- [Phase 6: Dashboard](docs/phase-6-dashboard.md)
 
 ## Stack
 
@@ -31,8 +32,10 @@ npm run dev
 ```
 
 Open http://localhost:3000 for the endpoint list. Create, edit, and enable or
-disable endpoints there. Historical records can still be inspected with
-`npm run db:studio` until the dashboard and detail views are built.
+disable endpoints there. Open http://localhost:3000/dashboard for observed
+health, latest response timings, recent check status, and active incidents.
+Full historical records can still be inspected with `npm run db:studio`
+until the endpoint detail views are built.
 
 Management currently has no authentication. Keep this phase on a trusted local
 machine; do not expose its pages or Server Actions publicly. Cron bearer
@@ -101,6 +104,24 @@ Edits retain history and lastCheckedAt. Saving settings or disabling an
 endpoint invalidates its active scheduler claim; old scheduled work cannot
 persist after that change. Disabling is not a recovery and does not resolve
 an incident. See the [Phase 5 guide](docs/phase-5-endpoint-management.md).
+
+## Dashboard
+
+The dashboard reports total endpoints, freshly observed healthy/down counts,
+and all open incidents. Never-checked endpoints are pending, disabled endpoints
+are separate, and observations older than two configured intervals are stale.
+Future timestamps are unknown rather than healthy. These states partition the
+endpoint total; incident counts are independent and include disabled endpoints.
+
+Latency and last checked refer to the latest CheckResult by observation time,
+not arrival order. Response-less checks show no latency, not a timeout duration
+masquerading as a response time. Recent status marks represent up to 12 stored
+checks, oldest to newest. No placeholder history is generated.
+
+The dashboard is a database snapshot. Its refresh button reloads saved data;
+it never executes checks or starts a timer. Run `checks:watch` separately for
+periodic monitoring. See the [Phase 6 guide](docs/phase-6-dashboard.md) for
+rules, consistency, tests, and limitations.
 
 ## Incident Lifecycle
 

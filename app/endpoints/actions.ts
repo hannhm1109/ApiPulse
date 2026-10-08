@@ -17,6 +17,7 @@ export async function saveEndpointAction(id: string | null, _previous: EndpointF
   }
   if (!result.ok) return { errors: result.errors, message: result.message };
   revalidatePath("/");
+  revalidatePath("/dashboard");
   revalidatePath(`/endpoints/${result.id}/edit`);
   redirect("/");
 }
@@ -26,6 +27,7 @@ export async function setEndpointEnabledAction(id: string, enabled: boolean): Pr
     const result = await setEndpointEnabled(prisma, id, enabled);
     if (result.ok) {
       revalidatePath("/");
+      revalidatePath("/dashboard");
       revalidatePath(`/endpoints/${result.id}/edit`);
     }
     return result;
