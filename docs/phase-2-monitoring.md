@@ -1,5 +1,9 @@
 # Phase 2: Monitoring Engine
 
+This guide records the Phase 2 snapshot. Phase 3 adds transactional incident
+processing and protects observation ordering; see the
+[current incident guide](phase-3-incidents.md) for those changes.
+
 ## What Was Built
 
 The engine executes a single HTTP GET, evaluates the status, and persists its
