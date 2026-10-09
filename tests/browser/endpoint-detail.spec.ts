@@ -81,6 +81,10 @@ test("full-window metrics, response gaps, and resolved incident durations render
   await page.locator(".latency-plot").screenshot({ path: info.outputPath("latency-chart.png") });
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: info.outputPath("detail-overview.png"), fullPage: false });
+  if (info.project.name === "mobile") {
+    await page.getByRole("navigation", { name: "Endpoint sections" }).getByRole("link", { name: "Latency", exact: true }).click();
+    await page.screenshot({ path: info.outputPath("detail-latency.png"), fullPage: false, scale: "css" });
+  }
   await page.locator(".chart-data summary").focus();
   await page.keyboard.press("Enter");
   await expect(page.locator(".chart-data-table tbody tr")).toHaveCount(31);

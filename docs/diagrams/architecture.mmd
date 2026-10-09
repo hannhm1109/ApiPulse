@@ -1,0 +1,35 @@
+flowchart TB
+  visitor[Browser]
+  timer[GitHub Actions timer<br/>Opt-in, best-effort]
+  local[Trusted local CLI<br/>One batch or watch]
+
+  subgraph app[Next.js application / Vercel]
+    ui[Dashboard and endpoint pages<br/>Public reads only]
+    reads[Read services<br/>Health, metrics, history]
+    cron[Protected cron route<br/>Bearer authentication]
+    scheduler[Scheduler<br/>Batch 20, concurrency 5]
+    http[HTTP engine<br/>SSRF validation, pinning, deadline]
+    persist[Persistence and incident service<br/>Fenced, per-endpoint transaction]
+  end
+
+  database[(Neon PostgreSQL<br/>Endpoints, checks, incidents, leases)]
+  targets[Controlled HTTPS targets<br/>Healthy, slow, failure / recovery]
+
+  visitor --> ui
+  ui --> reads
+  reads -->|Snapshot queries| database
+  timer -.-> cron
+  cron --> scheduler
+  local --> scheduler
+  scheduler -->|Atomic due claims| database
+  scheduler --> http
+  http -->|GET, no redirects| targets
+  http -->|Evaluated outcome| persist
+  persist -->|Result and lifecycle commit| database
+
+  classDef entry fill:#222328,color:#ffffff,stroke:#222328
+  classDef accent fill:#fff0eb,color:#8f3328,stroke:#c64131
+  classDef data fill:#eef1fb,color:#304892,stroke:#4163dc
+  class visitor,timer,local entry
+  class scheduler,http,persist accent
+  class database,targets data

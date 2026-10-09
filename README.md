@@ -1,29 +1,77 @@
 # API Pulse
 
-API Pulse periodically checks HTTP endpoints and tracks uptime, latency, incidents, and recoveries.
+HTTP endpoint monitoring with recorded checks, response latency, and incident recovery. Built to make the backend lifecycle as clear as the interface.
 
-Current phase: deployment. Neon production migrations, role deadlines and demo
-configuration are verified; live hosting, public smoke checks and scheduling are pending.
+**[Live Demo](https://api-pulse-eight.vercel.app/dashboard)** | [Architecture](docs/architecture.md) | [Interview Guide](docs/interview-guide.md) | [Deployment](docs/phase-9-deployment.md)
 
-- [Phase 0: Architecture](docs/phase-0-architecture.md)
-- [Phase 1: Project and database foundation](docs/phase-1-foundation.md)
-- [Phase 2: Monitoring engine](docs/phase-2-monitoring.md)
-- [Phase 3: Incident lifecycle](docs/phase-3-incidents.md)
-- [Phase 4: Scheduling](docs/phase-4-scheduling.md)
-- [Phase 5: Endpoint management](docs/phase-5-endpoint-management.md)
-- [Phase 6: Dashboard](docs/phase-6-dashboard.md)
-- [Phase 7: Endpoint detail](docs/phase-7-endpoint-detail.md)
-- [Phase 8: Production hardening](docs/phase-8-hardening.md)
-- [Phase 9: Deployment](docs/phase-9-deployment.md)
+![API Pulse dashboard with health states, response timings, check history, and active incidents](docs/images/dashboard.png)
+
+> Screenshots use local, synthetic browser-test fixtures to demonstrate populated states. The public demo stores actual HTTP observations against controlled demo targets, not these fixtures. No screenshot is a production availability claim.
+
+## What It Does
+
+- Configure HTTP GET endpoints, expected status, timeout, interval, and monitoring state in the trusted local workspace.
+- Claim due endpoints and execute a bounded batch independently of page views.
+- Record success, failure, or timeout; open one incident per unhealthy period and resolve it on recovery.
+- Inspect health, response timings, recent check marks, paginated history, and rolling 24-hour, 7-day, or 30-day metrics.
+- Navigate with a desktop rail, mobile bottom bar, health filters, and endpoint section shortcuts.
+
+The public deployment is **read-only**. No account is needed; visitors cannot add URLs, change settings, or trigger checks. Only three controlled targets are exposed.
+
+## Why It Is More Than CRUD
+
+The forms are the small part. The interesting work is coordinating network execution with durable state:
+
+| Engineering problem | Implementation |
+| --- | --- |
+| Overlapping scheduler runs | Atomic PostgreSQL claims with `FOR UPDATE SKIP LOCKED`, five-minute leases, and ownership checks before persistence |
+| Concurrent incident changes | Per-endpoint row lock and one transaction for result, last-check timestamp, incident transition, and claim release |
+| Duplicate open incidents | PostgreSQL partial unique index, in addition to application-level lifecycle rules |
+| Late results | Store valid older observations without overriding newer incident state or moving `lastCheckedAt` backward |
+| Server-side request forgery | URL validation, public-address checks for every DNS answer, a pinned connection, and no redirects; production adds a narrow origin/path allowlist |
+| Misleading health metrics | Pending, stale, disabled, and unknown are not reported as healthy; nonresponses are not displayed as latency |
+
+Claims reduce overlapping work and fence stale writers; they do **not** promise exactly-once HTTP requests. A crash or expired lease can lead to another attempt.
+
+## Architecture
+
+![API Pulse architecture: browser reads, protected scheduler, HTTP checks, and PostgreSQL](docs/diagrams/architecture.png)
+
+Next.js owns the UI and thin entry points. Server services own scheduling, HTTP execution, incidents, and metrics. PostgreSQL owns durable history and concurrency invariants. HTTP requests execute **outside** database transactions.
+
+The app runs in one Vercel region near Neon. The prepared GitHub Actions timer is opt-in and best-effort, not a precise clock. No Redis, queue, always-on worker, or in-process serverless timer is required for this scope.
+
+[Read the architecture and data model](docs/architecture.md), including editable Mermaid sources.
+
+## Monitoring Lifecycle
+
+![A scheduled check progresses through a lease, secure HTTP execution, fenced persistence, and incident state](docs/diagrams/monitoring-lifecycle.png)
+
+The first failure or timeout opens an incident; repeated failures keep it open; a success resolves it. Disabling monitoring does not resolve an incident. An internal database or scheduler error is not falsely recorded as a target outage.
+
+**Uptime is check-based:** successful checks / completed checks in the selected window. It is not continuous availability or a time-weighted SLA. Latency measures time to response headers, including DNS validation; response bodies are not inspected. Window metrics use all matching checks, not just the plotted subset or current history page.
+
+## Screenshots
+
+### Endpoint Detail
+
+![Endpoint detail with selected history period, check-based uptime, response metrics, and an interactive latency chart](docs/images/endpoint-detail.png)
+
+The chart uses real stored fixture timestamps and has gaps for nonresponses. Production history comes from actual checks; one observation is not drawn as a continuous chart.
+
+### Mobile
+
+<img src="docs/images/mobile-latency.png" alt="API Pulse mobile latency view with section shortcuts and persistent bottom navigation" width="390" />
+
+[Screenshot provenance and reproduction](docs/phase-10-portfolio.md#screenshots)
 
 ## Stack
 
-Next.js App Router, React, TypeScript, Tailwind CSS, Prisma 7, PostgreSQL, and uPlot.
+TypeScript, Next.js 16 App Router, React 19, Prisma 7, PostgreSQL, Undici, uPlot, Tailwind CSS, Lucide, Vitest, and Playwright. Production: Vercel + Neon.
 
-## Local Setup
+## Run Locally
 
-Requirements: Node.js 24, npm, and Docker Desktop running with Linux containers.
-Alternatively, use an existing PostgreSQL database and skip the Docker command.
+Requires Node.js 24, npm, and Docker Desktop with Linux containers. An existing PostgreSQL database can replace Docker; update `DATABASE_URL` accordingly.
 
 ```powershell
 Copy-Item .env.example .env
@@ -31,246 +79,58 @@ npm ci
 npm run db:up
 npm run db:deploy
 npm run db:generate
-npm run db:seed
-npm run dev
+npm run dev -- --hostname 127.0.0.1
 ```
 
-Open http://localhost:3000 for the endpoint list. Create, edit, and enable or
-disable endpoints there. Open http://localhost:3000/dashboard for observed
-health, latest response timings, recent check status, and active incidents.
-Click an endpoint name to open its health overview, check-based uptime,
-response latency chart, check history, and incident history. Settings remain
-available through the edit controls and the detail page's Settings link.
-
-Local management has no authentication. Keep it on a trusted local machine.
-Hosted production defaults to a public, read-only demo: management pages return
-404, writes return 403, and services reject management mutations. Vercel always
-enforces read-only mode. On non-Vercel production servers, `APIPULSE_MODE=local`
-is an explicit override for trusted local use only, never for a public server.
-Cron bearer authentication protects scheduler execution, not management access.
-
-Docker exposes PostgreSQL on localhost port 5433 to avoid the usual 5432 port.
-The credentials in `.env.example` and `compose.yaml` are for local development.
-For an existing database, set `DATABASE_URL` in `.env` to your connection URL.
-Never commit a real database credential.
-
-## Database Workflow
+Open [localhost:3000](http://localhost:3000), add an endpoint, and start the local scheduler in another terminal:
 
 ```powershell
-npm run db:validate
-npm run db:migrate -- --name describe_your_change
-npm run db:generate
-```
-
-Use `db:migrate` to create migrations during development. Use `db:deploy` to
-apply committed migrations to another database. Generating the client updates
-TypeScript code; it does not change database tables.
-
-`npm run db:down` stops the local database and preserves its named volume.
-
-## Sample Data
-
-The seed adds three disabled sample endpoints, four synthetic check results,
-and two sample incidents (one open, one resolved). These records demonstrate
-relationships; they are not real monitoring observations. The sample URLs use
-reserved `example.com` subdomains and are not working demo APIs.
-
-The seed uses fixed IDs and inserts missing records. Running it again does not
-duplicate data or reset existing records.
-
-For the deployed demo, use `npm run demo:seed` instead, with a dedicated managed
-database and `DEMO_BASE_URL` configured. It creates three enabled endpoint
-configurations, no synthetic checks or incidents. The app supplies controlled
-healthy, slow, and failure/recovery responses; actual HTTP checks build the
-history. Public reads and scheduled claims include only these three IDs, and
-outbound HTTP is restricted to their three paths on the configured HTTPS origin.
-See the [deployment guide](docs/phase-9-deployment.md) before running production commands.
-
-## Manual Monitoring
-
-Create an endpoint in the management UI, copy its ID from the edit URL, and run:
-
-```powershell
-npm run check:endpoint -- YOUR_ENDPOINT_ID
-```
-
-The command executes one GET request, evaluates the configured status, and
-saves a CheckResult, updates `lastCheckedAt`, and processes incidents in one transaction.
-It enforces a timeout, disables caching and redirects, validates all resolved
-addresses, and pins one public address to the connection without a second DNS
-lookup. Latency measures time from check start to response headers,
-including DNS validation. Response bodies are not inspected.
-
-The JSON output can report SUCCESS, FAILURE, or TIMEOUT. A recorded target
-failure is a successful monitoring operation; an internal execution or
-database error causes a nonzero command exit. See the
-[Phase 2 guide](docs/phase-2-monitoring.md) for HTTP details and the
-[Phase 8 guide](docs/phase-8-hardening.md) for current SSRF protections and limitations.
-
-## Endpoint Management
-
-The list supports search by name/URL, monitoring filters, settings links, and
-enable/disable switches. Create and edit forms validate configuration on the
-server and keep entered values when validation fails.
-
-Name is limited to 80 characters, URL to 2048, expected status to 100-599,
-timeout to 1-30000 ms, and interval to 1-1440 minutes. Numeric settings must be
-whole numbers. Credentials, fragments, and obvious local/private destinations
-are rejected; DNS/IP checks still run before every monitoring request.
-
-Edits retain history and lastCheckedAt. Saving settings or disabling an
-endpoint invalidates its active scheduler claim; old scheduled work cannot
-persist after that change. Disabling is not a recovery and does not resolve
-an incident. See the [Phase 5 guide](docs/phase-5-endpoint-management.md).
-
-## Dashboard
-
-The dashboard reports total endpoints, freshly observed healthy/down counts,
-and all open incidents. Never-checked endpoints are pending, disabled endpoints
-are separate, and observations older than two configured intervals are stale.
-Future timestamps are unknown rather than healthy. These states partition the
-endpoint total; incident counts are independent and include disabled endpoints.
-
-Latency and last checked refer to the latest CheckResult by observation time,
-not arrival order. Response-less checks show no latency, not a timeout duration
-masquerading as a response time. Recent status marks represent up to 12 stored
-checks, oldest to newest. No placeholder history is generated.
-
-The dashboard is a database snapshot. Its refresh button reloads saved data;
-it never executes checks or starts a timer. Run `checks:watch` separately for
-periodic monitoring. See the [Phase 6 guide](docs/phase-6-dashboard.md) for
-rules, consistency, tests, and limitations.
-
-## Endpoint Detail
-
-`/endpoints/<id>` shows current observed health alongside historical metrics.
-Choose a rolling 24-hour, 7-day (default), or 30-day window. Check-based uptime
-is successful checks / all completed checks in that window, including failures
-and timeouts. No checks means unknown uptime, not 0% or 100%. This is sampled
-health, not continuous uptime or a time-weighted SLA.
-
-Average response timing includes real HTTP responses, including unexpected
-status codes, but excludes response-less timeout/network durations. The chart
-shows up to 200 recent actual observations at their UTC timestamps, with gaps
-for nonresponses. Metrics use the full selected window, not the chart subset
-or displayed check page. Checks and all-time incidents have 25-row pages.
-Resolved incident durations stop at recovery; open durations use the snapshot
-time. Disabled monitoring retains historical observations and open incidents.
-
-Viewing, changing periods, and refreshing only read saved data. No new checks
-or demo observations are created. See the [Phase 7 guide](docs/phase-7-endpoint-detail.md)
-for exact rules, tests, and interview concepts.
-
-## Incident Lifecycle
-
-The first failed or timed-out check opens an incident. Further failures retain
-the same incident, original cause, and first failed check. A successful check
-resolves it with the recovery timestamp and check reference. Another failure
-after recovery opens a new incident.
-
-Writes are serialized per endpoint, and a PostgreSQL partial unique index
-enforces one open incident per endpoint. All writes roll back together if
-processing fails. Older checks that finish late are stored in history without
-overriding newer incident state or moving `lastCheckedAt` backward.
-
-Apply the latest migration with `npm run db:deploy`. The
-[Phase 3 guide](docs/phase-3-incidents.md) explains the rules and how to test
-failure, repeated failure, recovery, and a new unhealthy period.
-
-## Scheduling
-
-Run one due-endpoint batch, or keep a local minute-based timer running:
-
-```powershell
-npm run checks:run
 npm run checks:watch
 ```
 
-The watch command runs immediately, then at minute boundaries, independently
-of page views. It processes up to 20 due endpoints with at most five concurrent
-checks per invocation. Ctrl+C stops future ticks after the current batch finishes.
-Scheduled endpoint timeouts must be between 1 and 30000 milliseconds.
+The watcher runs immediately and then at minute boundaries. Each batch claims up to 20 due endpoints and runs at most five checks concurrently. Timeout is capped at 30 seconds. Ctrl+C stops future ticks after the current batch finishes.
 
-`GET /api/cron/checks` runs the same scheduler and requires
-`Authorization: Bearer <CRON_SECRET>`. Configure a random secret of at least
-16 characters in `.env` or the hosting environment. Missing secret
-configuration returns 503; invalid authorization returns 401. The endpoint
-does not accept URLs or settings from the request.
+For one batch use `npm run checks:run`. For one endpoint use `npm run check:endpoint -- YOUR_ENDPOINT_ID`. Dashboard refresh only reloads saved data; it never executes checks.
 
-The scheduler uses expiring database claims without changing `lastCheckedAt`
-until a result is recorded. Overlapping invocations cannot claim the same
-active lease, and a replaced owner cannot commit a stale result.
+Local management has **no authentication**. Keep it on a trusted local machine. Docker exposes PostgreSQL on port 5433; the example credentials are development-only. `npm run db:down` preserves the named volume. Never commit real credentials.
 
-`vercel.cron.example.json` shows a minute-based deployment schedule. Vercel
-Hobby allows only daily cron jobs; this example needs Pro/Enterprise or a
-different external timer calling the protected route. No deployment is
-activated by the example file. See the
-[Phase 4 guide](docs/phase-4-scheduling.md) for setup, tests, and limitations.
+Optional `npm run db:seed` creates disabled sample endpoints and synthetic history; their reserved example URLs are not working APIs. Never use this sample seed for production. The separate `demo:seed` command creates only controlled production configurations, without synthetic observations.
 
-The default deployment preparation uses Vercel Hobby plus an opt-in GitHub
-Actions schedule every five minutes. It is best-effort, not a precise timer or
-an uptime SLA. `.github/workflows/monitor.yml` does not run the scheduler unless
-the repository variable `ENABLE_MONITORING` is `true`. Configuration, protected
-manual runs, and the alternative Pro native-cron setup are in the
-[Phase 9 guide](docs/phase-9-deployment.md).
-
-## Verification
+## Verify
 
 ```powershell
 npm test
-npm run db:validate
 npm run lint
 npm run typecheck
-npm run build
-npm audit --omit=dev
-npm audit
-```
+npm run db:validate
 
-Database checks additionally require a running PostgreSQL instance. See the
-[Phase 1 guide](docs/phase-1-foundation.md) for the migration and seed checks.
-Monitoring unit and native HTTP tests run without a database or internet.
-Incident policy tests are included in the same `npm test` command.
-The [Phase 2 guide](docs/phase-2-monitoring.md) documents the separate PostgreSQL
-integration suite (`npm run test:db`) and its setup.
-
-Browser tests require a migrated, empty dedicated test database and Chromium:
-
-```powershell
 $env:TEST_DATABASE_URL = "postgresql://apipulse:apipulse@localhost:5433/apipulse_test"
 npm run test:db:prepare
+npm run test:db
 npx playwright install chromium
 npm run test:ui
 ```
 
-Do not seed the browser test database. Tests refuse an identical normal/test
-database host, port and name, even when credentials/options differ. This guard
-cannot detect different hostnames pointing to the same server; you remain
-responsible for selecting a dedicated database.
+The browser command includes a production build. Use an empty, dedicated test database; do not seed it, run a scheduler against it, or run database and browser suites concurrently. Browser servers use ports 3100-3102 and stop afterward. Database tests require permission to create a temporary test-only role. Unit/HTTP transport tests need neither a database nor internet.
 
-Browser tests start production servers on localhost ports 3100, 3101 and 3102 and
-stop them afterward. Port 3101 intentionally uses an unreachable database to
-verify generic errors and retry behavior without stopping your regular app or
-database; port 3102 verifies public read-only behavior. The PostgreSQL suite also
-creates and removes a temporary test-only role to verify pooled-connection
-deadlines; its dedicated test database needs permission to create roles.
-Do not run browser and database suites concurrently or run a scheduler
-against their database.
+Verification on October 9, 2026: **358 unit tests, 76 PostgreSQL integration tests, and 68 desktop/mobile browser tests**. Coverage includes claims, rollback, recovery, out-of-order writes, SSRF, database deadlines, public write rejection, empty/error states, responsive layouts, clipboard feedback, and rendered chart pixels. See [Phase 10 verification](docs/phase-10-portfolio.md#verification) for the latest checks.
 
-## Hardening Status
+## Live Demo And Limits
 
-Phase 8 adds connection-pinned SSRF checks, bounded PostgreSQL waits, consistent
-incident/result ordering, redacted structured logs, and basic browser security
-headers. Loading, empty, error, scheduler-failure, and history paths have
-automated regression coverage. See the [Phase 8 guide](docs/phase-8-hardening.md)
-for exact verification steps and interview concepts.
+[api-pulse-eight.vercel.app](https://api-pulse-eight.vercel.app/dashboard) runs three targets: healthy HTTP 200, deliberately slow HTTP 200, and a UTC-based HTTP 503/200 recovery cycle. Target behavior is simulated; saved checks and incidents are generated by real HTTP attempts. Configuration and public access are deliberately restricted.
 
-The production dependency audit reports zero findings at verification time.
-The full audit still reports five high-severity findings in the development-only
-lint dependency chain rooted in `braces`. Do not apply the suggested forced
-Next.js lint downgrade blindly. Phase 9 adds read-only public access, a narrow
-demo outbound allowlist, production migration tooling and smoke checks.
-Neon direct and pooled database connections have been verified. Live hosting,
-deployed smoke checks and scheduled execution have not yet been verified.
-Follow the [deployment runbook](docs/phase-9-deployment.md), including role
-deadlines, production-only secrets and preview-database isolation, before publishing.
+Live readiness, read-only access, authenticated manual scheduling, and real production observations have been verified. Automatic scheduled execution and a complete production failure/recovery cycle are **not yet verified**. The prepared workflow remains opt-in; old observations correctly become stale. See the [activation runbook](docs/phase-9-deployment.md#launch-order).
 
+This is a single-region portfolio monitor, not a production monitoring service. It has no alert delivery, accounts, teams, retention cleanup, public rate limiter, retries, response-body assertions, or independent multi-region probes. A monitor sharing its targets' hosting cannot independently observe a total platform outage.
+
+The last production dependency audit had zero findings; the full audit had five high-severity findings in development-only lint dependencies. See [hardening notes](docs/phase-8-hardening.md). Do not blindly force a framework/lint downgrade to clear an audit warning.
+
+## Engineering Notes
+
+- [Architecture and concurrency guarantees](docs/architecture.md)
+- [Interview explanation and demo walkthrough](docs/interview-guide.md)
+- [Phase 10: Portfolio assets and repository metadata](docs/phase-10-portfolio.md)
+- [Interface design](docs/interface-design.md)
+- [Deployment and operations](docs/phase-9-deployment.md)
+- [Production hardening](docs/phase-8-hardening.md)
+- [Earlier implementation phases](docs/architecture.md#implementation-history)

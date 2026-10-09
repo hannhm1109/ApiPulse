@@ -6,13 +6,16 @@ Repository preparation is implemented and locally verified. The Vercel project
 is created and Neon is connected through the Vercel Marketplace. Production role
 deadlines, all three migrations and demo configuration have been applied.
 Direct and pooled Neon connections are verified, including inherited server
-deadlines and three enabled demo endpoints with zero checks or incidents.
+deadlines. Demo seeding created three enabled configurations without synthetic
+checks or incidents; authenticated monitoring subsequently stored real HTTP results.
 
 The assigned production origin is `https://api-pulse-eight.vercel.app`.
-Public readiness, deployed smoke checks, real HTTP observations and scheduled
-execution are **not verified yet**; this is not a claim that the demo is live.
+Public readiness, deployed smoke checks, read-only restrictions, authenticated
+manual scheduling and real HTTP observations are verified. The redesigned
+interface is deployed. Automatic scheduled execution and a complete production
+failure/recovery cycle are **not verified yet**; old observations can become stale.
 Operator credentials remain in an ignored local environment file, not in source
-control or chat. Phase 10 has not started.
+control or chat. Phase 10 covers portfolio presentation separately.
 
 The prepared default is a public read-only demo on Vercel Hobby, managed
 PostgreSQL (Neon is a suitable option), and an external five-minute GitHub
@@ -243,15 +246,17 @@ scheduler. Browser tests build production and start local servers on 3100
 (management), 3101 (deliberate database outage) and 3102 (public demo), then stop
 them. The normal development server/database remain separate.
 
-Verified locally on October 9, 2026: 358 unit tests, 76 PostgreSQL tests and 62
+Verified locally on October 9, 2026: 358 unit tests, 76 PostgreSQL tests and 68
 desktop/mobile browser tests. Lint, TypeScript, schema validation and production
 build pass. Production dependency audit has zero findings; the full audit still
 has five high-severity development-only lint-chain findings documented in Phase 8.
 Production Neon setup was subsequently verified on October 9, 2026: all three
 migrations applied, role deadlines inherited through the actual pooled endpoint,
 and three enabled demo configurations with no synthetic checks or incidents.
-The live allowlisted HTTP path, scheduled workflow execution and deployed public
-smoke remain pending the Vercel deployment.
+The live allowlisted HTTP path, authenticated manual scheduler batch and deployed
+public smoke were subsequently verified. Scheduled workflow execution and a full
+production incident/recovery cycle remain unverified. Portfolio verification is
+recorded in [Phase 10](phase-10-portfolio.md).
 
 ## Interview Concepts
 
@@ -270,4 +275,4 @@ smoke remain pending the Vercel deployment.
 - **Scheduling trade-off:** a best-effort five-minute timer is sufficient to
   demonstrate due logic and recovery, but missed/delayed samples limit accuracy.
 
-Stop here. Phase 10 requires separate approval.
+Next: [Phase 10 portfolio presentation](phase-10-portfolio.md).

@@ -1,0 +1,18 @@
+flowchart LR
+  claim[Claim due endpoints<br/>Token and lease]
+  request[Validate, pin, and GET<br/>Bounded deadline]
+  owner[Lock row and fence lease<br/>Transaction begins]
+  skip[Skip stale scheduled result<br/>No observation inserted]
+  save[Save check and lifecycle<br/>Latest-result incident policy]
+  commit[Release owned claim and commit<br/>Readers see saved history]
+
+  claim --> request -->|HTTP outcome| owner
+  owner -->|Lost lease| skip
+  owner -->|Valid lease| save --> commit
+
+  classDef accent fill:#fff0eb,color:#8f3328,stroke:#c64131
+  classDef data fill:#eef1fb,color:#304892,stroke:#4163dc
+  classDef warning fill:#fbf3df,color:#76541b,stroke:#ac791d
+  class claim,request accent
+  class save,commit data
+  class skip warning
