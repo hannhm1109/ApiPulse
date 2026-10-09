@@ -10,7 +10,7 @@ import { HistoryPagination } from "./history-pagination";
 
 const milliseconds = (value: number | null) => value == null ? "--" : `${Math.round(value).toLocaleString("en-US")} ms`;
 
-export function DetailView({ data }: { data: EndpointDetailData }) {
+export function DetailView({ data, readOnly }: { data: EndpointDetailData; readOnly: boolean }) {
   const { endpoint, options, metrics, latestCheck } = data;
   return <main className="page-container detail-page" id="main-content">
     <Link href="/dashboard" className="back-link"><ArrowLeft size={16} aria-hidden="true" />Dashboard</Link>
@@ -18,7 +18,7 @@ export function DetailView({ data }: { data: EndpointDetailData }) {
       <div className="detail-identity"><div className="detail-title"><h1>{endpoint.name}</h1><HealthBadge health={data.health} /></div>
         <p className="detail-url mono"><span className="method-badge">GET</span>{endpoint.url}</p></div>
       <div className="detail-actions"><time className="snapshot-time muted" dateTime={data.generatedAt} title={data.generatedAt}>Updated {utcTime(data.generatedAt)} UTC</time>
-        <RefreshDetail /><Link href={`/endpoints/${endpoint.id}/edit`} className="button button-secondary"><Settings2 size={16} aria-hidden="true" />Settings</Link>
+        <RefreshDetail />{!readOnly && <Link href={`/endpoints/${endpoint.id}/edit`} className="button button-secondary"><Settings2 size={16} aria-hidden="true" />Settings</Link>}
       </div>
     </div>
     <div className="detail-configuration"><span>Expected <strong>{endpoint.expectedStatusCode}</strong></span><span>Timeout <strong>{endpoint.timeoutMs.toLocaleString("en-US")} ms</strong></span>

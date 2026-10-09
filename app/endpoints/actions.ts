@@ -7,8 +7,10 @@ import { saveEndpoint, setEndpointEnabled } from "../../server/endpoints/endpoin
 import { endpointFormInput } from "../../server/endpoints/validation";
 import type { EndpointFormState, EndpointMutationResult } from "../../server/endpoints/types";
 import { logServerError } from "../../server/logging";
+import { isReadOnlyDeployment, READ_ONLY_MESSAGE } from "../../server/deployment";
 
 export async function saveEndpointAction(id: string | null, _previous: EndpointFormState, form: FormData): Promise<EndpointFormState> {
+  if (isReadOnlyDeployment()) return { message: READ_ONLY_MESSAGE };
   let result: EndpointMutationResult;
   try {
     result = await saveEndpoint(prisma, endpointFormInput(form), id ?? undefined);
@@ -25,6 +27,7 @@ export async function saveEndpointAction(id: string | null, _previous: EndpointF
 }
 
 export async function setEndpointEnabledAction(id: string, enabled: boolean): Promise<EndpointMutationResult> {
+  if (isReadOnlyDeployment()) return { ok: false, message: READ_ONLY_MESSAGE };
   try {
     const result = await setEndpointEnabled(prisma, id, enabled);
     if (result.ok) {

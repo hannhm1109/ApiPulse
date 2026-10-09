@@ -5,11 +5,13 @@ import { prisma } from "../../../../server/db/prisma";
 import { getEndpoint } from "../../../../server/endpoints/endpoint-service";
 import { EndpointForm } from "../../../../components/endpoints/endpoint-form";
 import { loadPageData } from "../../../../server/page-data";
+import { isReadOnlyDeployment } from "../../../../server/deployment";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Edit endpoint | API Pulse" };
 
 export default async function EditEndpoint({ params }: { params: Promise<{ id: string }> }) {
+  if (isReadOnlyDeployment()) notFound();
   const { id } = await params;
   const endpoint = await loadPageData("endpoint_settings_read_error", () => getEndpoint(prisma, id));
   if (!endpoint) notFound();

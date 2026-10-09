@@ -2,6 +2,8 @@ import "server-only";
 import { lookup } from "node:dns/promises";
 import type { LookupAddress } from "node:dns";
 import { isIP } from "node:net";
+import { isReadOnlyDeployment } from "../deployment";
+import { assertDemoTarget } from "../demo/config";
 import { isPublicAddress, parseTargetUrl, targetHostname, TargetUrlError } from "./target-url";
 export { isPublicAddress, TargetUrlError } from "./target-url";
 
@@ -9,6 +11,7 @@ export type ValidatedTarget = { url: URL; address: LookupAddress };
 
 export async function validateTargetUrl(rawUrl: string): Promise<ValidatedTarget> {
   const url = parseTargetUrl(rawUrl);
+  if (isReadOnlyDeployment()) assertDemoTarget(url);
   const hostname = targetHostname(url);
 
   const addresses = isIP(hostname)

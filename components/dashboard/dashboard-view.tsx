@@ -9,7 +9,7 @@ import { formatDuration, relativeTime, utcTime } from "../../lib/display-time";
 import { CheckHistory } from "./check-history";
 import { HealthBadge, healthLabels } from "../health-badge";
 
-export function DashboardView({ data }: { data: DashboardData }) {
+export function DashboardView({ data, readOnly }: { data: DashboardData; readOnly: boolean }) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [pending, startTransition] = useTransition();
@@ -26,7 +26,7 @@ export function DashboardView({ data }: { data: DashboardData }) {
           onClick={() => startTransition(() => router.refresh())}><RefreshCw size={16} className={pending ? "spin" : ""} aria-hidden="true" /></button>
           <span role="tooltip" className="tooltip-text">Refresh dashboard</span>
         </span>
-        <Link href="/endpoints/new" className="button button-primary"><Plus size={16} aria-hidden="true" />Add endpoint</Link>
+        {!readOnly && <Link href="/endpoints/new" className="button button-primary"><Plus size={16} aria-hidden="true" />Add endpoint</Link>}
       </div>
     </div>
     <dl className="dashboard-metrics" aria-label="Monitoring summary">
@@ -52,8 +52,8 @@ export function DashboardView({ data }: { data: DashboardData }) {
           <div className="incident-age"><span className="incident-open">Open</span>
             <time dateTime={incident.startedAt} title={incident.startedAt}>{formatDuration(Date.parse(data.generatedAt) - Date.parse(incident.startedAt))}</time>
           </div>
-          <span className="tooltip"><Link href={`/endpoints/${incident.endpointId}/edit`} className="icon-button" aria-label={`Edit settings for ${incident.endpointName}`}>
-            <ArrowUpRight size={17} aria-hidden="true" /></Link><span className="tooltip-text" role="tooltip">Endpoint settings</span></span>
+          {!readOnly && <span className="tooltip"><Link href={`/endpoints/${incident.endpointId}/edit`} className="icon-button" aria-label={`Edit settings for ${incident.endpointName}`}>
+            <ArrowUpRight size={17} aria-hidden="true" /></Link><span className="tooltip-text" role="tooltip">Endpoint settings</span></span>}
         </li>)}
       </ul> : <p className="no-incidents">No active incidents</p>}
     </section>
@@ -72,7 +72,7 @@ export function DashboardView({ data }: { data: DashboardData }) {
       </div>
       {endpoints.length ? <table className="endpoint-table dashboard-table">
         <caption className="sr-only">Endpoint health and latest monitoring observations</caption>
-        <thead><tr><th scope="col">Endpoint</th><th scope="col">Status</th><th scope="col">Latency</th><th scope="col">Last checked</th><th scope="col">Recent checks</th><th scope="col"><span className="sr-only">Settings</span></th></tr></thead>
+        <thead><tr><th scope="col">Endpoint</th><th scope="col">Status</th><th scope="col">Latency</th><th scope="col">Last checked</th><th scope="col">Recent checks</th>{!readOnly && <th scope="col"><span className="sr-only">Settings</span></th>}</tr></thead>
         <tbody>{endpoints.map(endpoint => <tr key={endpoint.id}>
           <th scope="row" className="endpoint-identity"><div className="endpoint-name-line"><span className="method-badge">GET</span>
             <Link href={`/endpoints/${endpoint.id}`} className="endpoint-name">{endpoint.name}</Link></div><span className="endpoint-url mono">{endpoint.url}</span>
@@ -86,12 +86,12 @@ export function DashboardView({ data }: { data: DashboardData }) {
             : <span className="muted">Never</span>}
           </td>
           <td><span className="mobile-label">Recent checks</span><CheckHistory checks={endpoint.recentChecks} /></td>
-          <td className="row-action"><span className="tooltip"><Link href={`/endpoints/${endpoint.id}/edit`} className="icon-button" aria-label={`Edit ${endpoint.name}`}>
-            <ArrowUpRight size={18} aria-hidden="true" /></Link><span className="tooltip-text" role="tooltip">Endpoint settings</span></span></td>
+          {!readOnly && <td className="row-action"><span className="tooltip"><Link href={`/endpoints/${endpoint.id}/edit`} className="icon-button" aria-label={`Edit ${endpoint.name}`}>
+            <ArrowUpRight size={18} aria-hidden="true" /></Link><span className="tooltip-text" role="tooltip">Endpoint settings</span></span></td>}
         </tr>)}</tbody>
       </table> : <div className="empty-state"><Radio size={28} aria-hidden="true" /><h2>{data.endpoints.length ? "No matching endpoints" : "No endpoints yet"}</h2>
         {data.endpoints.length ? <button type="button" className="button button-secondary" onClick={() => { setFilter("all"); setSearch(""); }}>Clear filters</button>
-          : <Link href="/endpoints/new" className="button button-primary"><Plus size={16} aria-hidden="true" />Add endpoint</Link>}
+          : !readOnly && <Link href="/endpoints/new" className="button button-primary"><Plus size={16} aria-hidden="true" />Add endpoint</Link>}
       </div>}
     </section>
   </>;

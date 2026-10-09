@@ -21,7 +21,7 @@ export default defineConfig({
     url: "http://127.0.0.1:3100",
     reuseExistingServer: false,
     timeout: 60_000,
-    env: { DATABASE_URL: connectionString, CRON_SECRET: "browser-only-cron-secret-not-for-deployment" },
+    env: { DATABASE_URL: connectionString, CRON_SECRET: "browser-only-cron-secret-not-for-deployment", APIPULSE_MODE: "local", VERCEL: "0" },
   }, {
     command: "npm run start -- --port 3101 --hostname 127.0.0.1",
     url: "http://127.0.0.1:3101/endpoints/new",
@@ -30,6 +30,17 @@ export default defineConfig({
     env: {
       DATABASE_URL: "postgresql://fault-user:fault-password@127.0.0.1:1/fault-database",
       CRON_SECRET: "browser-only-cron-secret-not-for-deployment",
+      APIPULSE_MODE: "local", VERCEL: "0",
+    },
+  }, {
+    command: "npm run start -- --port 3102 --hostname 127.0.0.1",
+    url: "http://127.0.0.1:3102/api/demo/healthy",
+    reuseExistingServer: false,
+    timeout: 60_000,
+    env: {
+      DATABASE_URL: connectionString, DATABASE_CONNECTION_MODE: "direct",
+      CRON_SECRET: "browser-only-cron-secret-not-for-deployment",
+      APIPULSE_MODE: "demo", VERCEL: "1", DEMO_BASE_URL: "https://demo.example.com",
     },
   }],
 });

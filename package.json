@@ -24,6 +24,11 @@
     "db:validate": "prisma validate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
+    "db:deploy:production": "prisma migrate deploy --config prisma.production.config.ts",
+    "db:configure:production": "node --import tsx scripts/configure-production-db.ts",
+    "demo:seed": "node --conditions=react-server --import tsx scripts/seed-demo.ts",
+    "scheduler:remote": "node --env-file-if-exists=.env scripts/trigger-scheduler.mjs",
+    "smoke:deployment": "node --import tsx scripts/smoke-deployment.ts",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio"
   },

@@ -2,7 +2,8 @@
 
 API Pulse periodically checks HTTP endpoints and tracks uptime, latency, incidents, and recoveries.
 
-Current phase: production hardening (trusted-local operation; deployment is next).
+Current phase: deployment preparation. Public-demo configuration is implemented;
+live hosting, managed database setup and production smoke verification are pending.
 
 - [Phase 0: Architecture](docs/phase-0-architecture.md)
 - [Phase 1: Project and database foundation](docs/phase-1-foundation.md)
@@ -13,6 +14,7 @@ Current phase: production hardening (trusted-local operation; deployment is next
 - [Phase 6: Dashboard](docs/phase-6-dashboard.md)
 - [Phase 7: Endpoint detail](docs/phase-7-endpoint-detail.md)
 - [Phase 8: Production hardening](docs/phase-8-hardening.md)
+- [Phase 9: Deployment](docs/phase-9-deployment.md)
 
 ## Stack
 
@@ -40,9 +42,12 @@ Click an endpoint name to open its health overview, check-based uptime,
 response latency chart, check history, and incident history. Settings remain
 available through the edit controls and the detail page's Settings link.
 
-Management currently has no authentication. Keep this phase on a trusted local
-machine; do not expose its pages or Server Actions publicly. Cron bearer
-authentication does not protect management access.
+Local management has no authentication. Keep it on a trusted local machine.
+Hosted production defaults to a public, read-only demo: management pages return
+404, writes return 403, and services reject management mutations. Vercel always
+enforces read-only mode. On non-Vercel production servers, `APIPULSE_MODE=local`
+is an explicit override for trusted local use only, never for a public server.
+Cron bearer authentication protects scheduler execution, not management access.
 
 Docker exposes PostgreSQL on localhost port 5433 to avoid the usual 5432 port.
 The credentials in `.env.example` and `compose.yaml` are for local development.
@@ -72,6 +77,14 @@ reserved `example.com` subdomains and are not working demo APIs.
 
 The seed uses fixed IDs and inserts missing records. Running it again does not
 duplicate data or reset existing records.
+
+For the deployed demo, use `npm run demo:seed` instead, with a dedicated managed
+database and `DEMO_BASE_URL` configured. It creates three enabled endpoint
+configurations, no synthetic checks or incidents. The app supplies controlled
+healthy, slow, and failure/recovery responses; actual HTTP checks build the
+history. Public reads and scheduled claims include only these three IDs, and
+outbound HTTP is restricted to their three paths on the configured HTTPS origin.
+See the [deployment guide](docs/phase-9-deployment.md) before running production commands.
 
 ## Manual Monitoring
 
@@ -194,6 +207,13 @@ different external timer calling the protected route. No deployment is
 activated by the example file. See the
 [Phase 4 guide](docs/phase-4-scheduling.md) for setup, tests, and limitations.
 
+The default deployment preparation uses Vercel Hobby plus an opt-in GitHub
+Actions schedule every five minutes. It is best-effort, not a precise timer or
+an uptime SLA. `.github/workflows/monitor.yml` does not run the scheduler unless
+the repository variable `ENABLE_MONITORING` is `true`. Configuration, protected
+manual runs, and the alternative Pro native-cron setup are in the
+[Phase 9 guide](docs/phase-9-deployment.md).
+
 ## Verification
 
 ```powershell
@@ -227,10 +247,13 @@ database host, port and name, even when credentials/options differ. This guard
 cannot detect different hostnames pointing to the same server; you remain
 responsible for selecting a dedicated database.
 
-Browser tests start production servers on localhost ports 3100 and 3101 and
-stop both afterward. Port 3101 intentionally uses an unreachable database to
+Browser tests start production servers on localhost ports 3100, 3101 and 3102 and
+stop them afterward. Port 3101 intentionally uses an unreachable database to
 verify generic errors and retry behavior without stopping your regular app or
-database. Do not run browser and database suites concurrently or run a scheduler
+database; port 3102 verifies public read-only behavior. The PostgreSQL suite also
+creates and removes a temporary test-only role to verify pooled-connection
+deadlines; its dedicated test database needs permission to create roles.
+Do not run browser and database suites concurrently or run a scheduler
 against their database.
 
 ## Hardening Status
@@ -244,7 +267,9 @@ for exact verification steps and interview concepts.
 The production dependency audit reports zero findings at verification time.
 The full audit still reports five high-severity findings in the development-only
 lint dependency chain rooted in `braces`. Do not apply the suggested forced
-Next.js lint downgrade blindly. No authentication, hosting, public demo, or
-deployment configuration was activated in this phase. Public access protection
-and outbound-network restrictions remain prerequisites before publishing.
+Next.js lint downgrade blindly. Phase 9 adds read-only public access, a narrow
+demo outbound allowlist, production migration tooling and smoke checks.
+Live hosting and managed-provider verification have not yet been completed.
+Follow the [deployment runbook](docs/phase-9-deployment.md), including role
+deadlines, production-only secrets and preview-database isolation, before publishing.
 

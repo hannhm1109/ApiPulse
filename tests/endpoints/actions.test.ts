@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { saveEndpointAction, setEndpointEnabledAction } from "../../app/endpoints/actions";
 
 const mocks = vi.hoisted(() => ({ save: vi.fn(), toggle: vi.fn(), revalidate: vi.fn(), redirect: vi.fn() }));
@@ -8,6 +8,7 @@ vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 
 describe("endpoint server actions", () => {
+  afterEach(() => vi.unstubAllEnvs());
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(console, "error").mockImplementation(() => {});
@@ -56,5 +57,12 @@ describe("endpoint server actions", () => {
   it("returns a generic toggle error", async () => {
     mocks.toggle.mockRejectedValue(new Error("private database details"));
     expect(await setEndpointEnabledAction("endpoint", false)).toEqual({ ok: false, message: "Could not change monitoring. Please try again." });
+  });
+  it("blocks direct public-demo action calls before the service, revalidation or redirect", async () => {
+    vi.stubEnv("APIPULSE_MODE", "demo");
+    expect(await saveEndpointAction(null, {}, new FormData())).toMatchObject({ message: expect.stringContaining("disabled") });
+    expect(await setEndpointEnabledAction("demo-healthy", false)).toMatchObject({ ok: false });
+    expect(mocks.save).not.toHaveBeenCalled(); expect(mocks.toggle).not.toHaveBeenCalled();
+    expect(mocks.revalidate).not.toHaveBeenCalled(); expect(mocks.redirect).not.toHaveBeenCalled();
   });
 });

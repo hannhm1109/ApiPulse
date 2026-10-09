@@ -4,6 +4,8 @@ import { endpointIdSchema } from "../endpoints/validation";
 import { deriveHealth } from "../dashboard/health-summary";
 import type { CheckObservation } from "../dashboard/types";
 import type { DetailIncident, EndpointDetailData, HistoryQuery } from "./types";
+import { isReadOnlyDeployment } from "../deployment";
+import { DEMO_ENDPOINT_IDS } from "../demo/config";
 import { HISTORY_PAGE_SIZE, LATENCY_CHART_LIMIT, historyPagination, historyWindowStart, incidentDuration, parseHistoryOptions, responseLatency, summarizeChecks } from "./history-metrics";
 
 const checkSelect = { id: true, checkedAt: true, status: true, statusCode: true, responseTimeMs: true, failureReason: true } as const;
@@ -13,6 +15,7 @@ const serializeCheck = (check: CheckObservation) => ({ ...check, checkedAt: chec
 
 export async function getEndpointDetail(db: PrismaClient, id: string, query: HistoryQuery = {}, now?: Date): Promise<EndpointDetailData | null> {
   if (!endpointIdSchema.safeParse(id).success) return null;
+  if (isReadOnlyDeployment() && !DEMO_ENDPOINT_IDS.includes(id)) return null;
   const options = parseHistoryOptions(query);
   // Counts, aggregates, history, and current state must share the same committed database snapshot.
   return db.$transaction(async tx => {

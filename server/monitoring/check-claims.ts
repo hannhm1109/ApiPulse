@@ -1,7 +1,9 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import type { Endpoint, PrismaClient } from "../../generated/prisma/client";
+import { Prisma, type Endpoint, type PrismaClient } from "../../generated/prisma/client";
 import { CHECK_CLAIM_DURATION_MS, SCHEDULER_BATCH_SIZE } from "./scheduler-settings";
+import { isReadOnlyDeployment } from "../deployment";
+import { DEMO_ENDPOINT_IDS } from "../demo/config";
 
 export class CheckClaimLostError extends Error {
   constructor() {
@@ -23,12 +25,14 @@ export async function claimDueEndpoints(
   }
   const token = randomUUID();
   const expiresAt = new Date(now.getTime() + CHECK_CLAIM_DURATION_MS);
+  const scope = isReadOnlyDeployment() ? Prisma.sql`AND "id" IN (${Prisma.join(DEMO_ENDPOINT_IDS)})` : Prisma.empty;
 
   // Selection and claiming are one statement; competing runs skip rows already locked.
   return db.$queryRaw<ClaimedEndpoint[]>`
     WITH due AS (
       SELECT "id" FROM "Endpoint"
       WHERE "enabled" = true
+        ${scope}
         AND ("lastCheckedAt" IS NULL
           OR "lastCheckedAt" + "checkIntervalMinutes" * INTERVAL '1 minute' <= ${now})
         AND ("checkClaimExpiresAt" IS NULL OR "checkClaimExpiresAt" <= ${now})

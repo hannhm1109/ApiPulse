@@ -1,5 +1,6 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../../generated/prisma/client";
+import { pgPoolConfig } from "./pool-config";
 
 export function createPrismaClient() {
   const connectionString = process.env.DATABASE_URL;
@@ -8,15 +9,7 @@ export function createPrismaClient() {
     throw new Error("DATABASE_URL is required to connect to PostgreSQL.");
   }
 
-  const adapter = new PrismaPg({
-    connectionString,
-    max: 5,
-    connectionTimeoutMillis: 5000,
-    statement_timeout: 10_000,
-    lock_timeout: 3000,
-    idle_in_transaction_session_timeout: 10_000,
-    application_name: "api-pulse",
-  });
+  const adapter = new PrismaPg(pgPoolConfig(connectionString));
 
   return new PrismaClient({ adapter });
 }

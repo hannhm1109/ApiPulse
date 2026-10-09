@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Activity, Layers2 } from "lucide-react";
 import { AppNav } from "./app-nav";
+import { isReadOnlyDeployment } from "../server/deployment";
 
 export function AppHeader() {
   return (
@@ -11,7 +12,7 @@ export function AppHeader() {
           <span>API Pulse</span>
         </Link>
         <AppNav />
-        <span className="workspace-label"><Layers2 size={15} aria-hidden="true" />Workspace</span>
+        <span className="workspace-label"><Layers2 size={15} aria-hidden="true" />{isReadOnlyDeployment() ? "Public demo" : "Workspace"}</span>
       </div>
     </header>
   );
