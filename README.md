@@ -2,8 +2,8 @@
 
 API Pulse periodically checks HTTP endpoints and tracks uptime, latency, incidents, and recoveries.
 
-Current phase: deployment preparation. Public-demo configuration is implemented;
-live hosting, managed database setup and production smoke verification are pending.
+Current phase: deployment. Neon production migrations, role deadlines and demo
+configuration are verified; live hosting, public smoke checks and scheduling are pending.
 
 - [Phase 0: Architecture](docs/phase-0-architecture.md)
 - [Phase 1: Project and database foundation](docs/phase-1-foundation.md)
@@ -269,7 +269,8 @@ The full audit still reports five high-severity findings in the development-only
 lint dependency chain rooted in `braces`. Do not apply the suggested forced
 Next.js lint downgrade blindly. Phase 9 adds read-only public access, a narrow
 demo outbound allowlist, production migration tooling and smoke checks.
-Live hosting and managed-provider verification have not yet been completed.
+Neon direct and pooled database connections have been verified. Live hosting,
+deployed smoke checks and scheduled execution have not yet been verified.
 Follow the [deployment runbook](docs/phase-9-deployment.md), including role
 deadlines, production-only secrets and preview-database isolation, before publishing.
 

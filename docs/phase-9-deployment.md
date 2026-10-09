@@ -2,13 +2,17 @@
 
 ## Status
 
-Repository preparation is implemented and locally verified. A live Vercel
-project, managed PostgreSQL connection, production migrations, real public
-checks and deployed smoke tests are **not verified yet**. No demo URL is claimed.
-Vercel and Neon integrations were suggested but were not connected during this
-phase. Connect those accounts to finish assisted deployment, or follow this
-runbook in their dashboards. Do not paste database credentials or cron secrets
-into chat. Phase 10 has not started.
+Repository preparation is implemented and locally verified. The Vercel project
+is created and Neon is connected through the Vercel Marketplace. Production role
+deadlines, all three migrations and demo configuration have been applied.
+Direct and pooled Neon connections are verified, including inherited server
+deadlines and three enabled demo endpoints with zero checks or incidents.
+
+The assigned production origin is `https://api-pulse-eight.vercel.app`.
+Public readiness, deployed smoke checks, real HTTP observations and scheduled
+execution are **not verified yet**; this is not a claim that the demo is live.
+Operator credentials remain in an ignored local environment file, not in source
+control or chat. Phase 10 has not started.
 
 The prepared default is a public read-only demo on Vercel Hobby, managed
 PostgreSQL (Neon is a suitable option), and an external five-minute GitHub
@@ -17,7 +21,7 @@ operation. Confirm provider quotas and account permissions before activating it.
 
 ## What We Built
 
-- `vercel.json`: Next.js, `npm ci`, production build, single Paris (`cdg1`) region.
+- `vercel.json`: Next.js, `npm ci`, production build, single US East 1 (`iad1`) region.
 - Production uses Node.js 24, the existing PostgreSQL/Prisma stack and Node HTTP execution.
 - Public management is disabled at Proxy, Server Action and service boundaries.
 - Public lists, dashboard, detail and scheduler claims only include three fixed demo IDs.
@@ -53,8 +57,10 @@ See [Vercel function limits](https://vercel.com/docs/functions/limitations).
 Confirm Node.js 24 in project settings, consistent with `package.json`.
 See [supported Node.js versions](https://vercel.com/docs/functions/runtimes/node-js/node-js-versions).
 
-The region is a starting choice, not multi-region monitoring. Select a nearby
-database region; change `vercel.json` if your managed database is elsewhere.
+The selected Neon database is in AWS US East 1 (N. Virginia), so Vercel uses
+`iad1` to keep database round trips nearby. This is not multi-region monitoring.
+See [Vercel region guidance](https://vercel.com/docs/regions). Change `vercel.json`
+if the managed database moves to a different region.
 
 ## Production Variables
 
@@ -106,9 +112,11 @@ See [PostgreSQL ALTER ROLE](https://www.postgresql.org/docs/current/sql-alterrol
 The client-side query timeout in pooled mode is only a fallback; it does **not**
 replace server cancellation. `/api/health` verifies the three server deadline
 values and queries the endpoint table, returning generic 503 on bad configuration.
-Local PostgreSQL coverage verifies inheritance with a temporary test-only role;
-it is not proof of Neon/PgBouncer compatibility. Verify the actual provider via
-deployed readiness and smoke tests before enabling monitoring.
+Local PostgreSQL coverage verifies inheritance with a temporary test-only role.
+The real Neon pooled endpoint has also been verified with the production role:
+statement timeout 10s, lock timeout 3s and idle-in-transaction timeout 10s. This
+does not replace deployed readiness: Vercel must use the same database/role and
+pass public smoke tests before enabling monitoring.
 
 ## Launch Order
 
@@ -239,8 +247,11 @@ Verified locally on October 9, 2026: 358 unit tests, 76 PostgreSQL tests and 62
 desktop/mobile browser tests. Lint, TypeScript, schema validation and production
 build pass. Production dependency audit has zero findings; the full audit still
 has five high-severity development-only lint-chain findings documented in Phase 8.
-Provider setup, production migration execution, the live allowlisted HTTP path,
-scheduled workflow execution and public smoke remain pending account access.
+Production Neon setup was subsequently verified on October 9, 2026: all three
+migrations applied, role deadlines inherited through the actual pooled endpoint,
+and three enabled demo configurations with no synthetic checks or incidents.
+The live allowlisted HTTP path, scheduled workflow execution and deployed public
+smoke remain pending the Vercel deployment.
 
 ## Interview Concepts
 
