@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { runScheduler } from "../../../../server/monitoring/scheduler";
+import { logServerError } from "../../../../server/logging";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,7 +26,7 @@ export async function GET(request: Request) {
     const summary = await runScheduler(prisma);
     return json(summary, summary.errors > 0 ? 503 : 200);
   } catch (error) {
-    console.error(JSON.stringify({ event: "scheduler_failed", error: error instanceof Error ? error.name : "UnknownError" }));
+    logServerError("scheduler_failed", error);
     return json({ error: "Scheduler execution failed" }, 503);
   }
 }

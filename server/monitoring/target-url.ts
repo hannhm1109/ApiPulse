@@ -11,7 +11,9 @@ export class TargetUrlError extends Error {
 
 export function isPublicAddress(address: string): boolean {
   if (!isIP(address)) return false;
-  return ipaddr.process(address).range() === "unicast";
+  const parsed = ipaddr.process(address);
+  // Azure's platform virtual address is globally numbered but exposes host infrastructure inside Azure.
+  return parsed.range() === "unicast" && parsed.toString() !== "168.63.129.16";
 }
 
 // Shared by configuration validation and execution; DNS is checked separately at execution time.
@@ -28,6 +30,7 @@ export function parseTargetUrl(rawUrl: string): URL {
   if (url.username || url.password) {
     throw new TargetUrlError("URLs containing credentials are not allowed");
   }
+  if (url.hash) throw new TargetUrlError("Remove the URL fragment; it is not sent to the server.");
   const hostname = targetHostname(url);
   if (
     !hostname || hostname === "localhost" || hostname.endsWith(".localhost") ||
@@ -43,5 +46,9 @@ export function parseTargetUrl(rawUrl: string): URL {
 }
 
 export function targetHostname(url: URL): string {
-  return url.hostname.replace(/^\[|\]$/g, "").replace(/\.$/, "").toLowerCase();
+  return normalizeHostname(url.hostname);
+}
+
+export function normalizeHostname(hostname: string): string {
+  return hostname.replace(/^\[|\]$/g, "").replace(/\.$/, "").toLowerCase();
 }

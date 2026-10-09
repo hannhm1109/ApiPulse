@@ -1,8 +1,9 @@
 import "dotenv/config";
-import { defineConfig, env } from "prisma/config";
+import { defineConfig } from "prisma/config";
+import { requireTestDatabaseUrl } from "./scripts/test-database-url.ts";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: { path: "prisma/migrations" },
-  datasource: { url: env("TEST_DATABASE_URL") },
+  datasource: { url: requireTestDatabaseUrl() },
 });

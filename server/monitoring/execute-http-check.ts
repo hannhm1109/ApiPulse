@@ -2,6 +2,8 @@ import "server-only";
 import { evaluateResponse } from "./evaluate-response";
 import { TargetUrlError, validateTargetUrl } from "./ssrf";
 import type { CheckConfiguration, CheckOutcome } from "./types";
+import { createTargetDispatcher } from "./pinned-dispatcher";
+import { MAX_SCHEDULED_TIMEOUT_MS } from "./scheduler-settings";
 
 class CheckTimeoutError extends Error {}
 class NetworkRequestError extends Error {}
@@ -18,9 +20,9 @@ export async function executeHttpCheck(endpoint: CheckConfiguration): Promise<Ch
   if (
     !Number.isInteger(endpoint.timeoutMs) ||
     endpoint.timeoutMs < 1 ||
-    endpoint.timeoutMs > 2_147_483_647
+    endpoint.timeoutMs > MAX_SCHEDULED_TIMEOUT_MS
   ) {
-    throw new RangeError("timeoutMs must be a positive 32-bit integer");
+    throw new RangeError(`timeoutMs must be an integer between 1 and ${MAX_SCHEDULED_TIMEOUT_MS}`);
   }
   if (
     !Number.isInteger(endpoint.expectedStatusCode) ||
@@ -35,6 +37,7 @@ export async function executeHttpCheck(endpoint: CheckConfiguration): Promise<Ch
   const controller = new AbortController();
   const elapsed = () => Math.max(0, Math.round(performance.now() - startedAt));
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let dispatcher: ReturnType<typeof createTargetDispatcher> | undefined;
 
   // The deadline covers DNS validation as well as the request, even though DNS cannot be cancelled.
   const deadline = new Promise<never>((_, reject) => {
@@ -45,18 +48,26 @@ export async function executeHttpCheck(endpoint: CheckConfiguration): Promise<Ch
   });
 
   const request = async (): Promise<CheckOutcome> => {
-    const url = await validateTargetUrl(endpoint.url);
+    const target = await validateTargetUrl(endpoint.url);
     controller.signal.throwIfAborted();
+    dispatcher = createTargetDispatcher(target, endpoint.timeoutMs);
     let response: Response;
     try {
-      response = await fetch(url, {
+      const options: RequestInit & { dispatcher: typeof dispatcher } = {
         method: "GET",
         signal: controller.signal,
         redirect: "manual",
         cache: "no-store",
         headers: { "User-Agent": "API-Pulse/0.1" },
-      });
+        dispatcher,
+      };
+      response = await fetch(target.url, options);
     } catch (error) {
+      if (error instanceof TypeError && error.cause instanceof Error && "code" in error.cause &&
+        ["UND_ERR_INVALID_ARG", "UND_ERR_INVALID_RETURN_VALUE", "UND_ERR_DESTROYED", "UND_ERR_CLOSED"]
+          .includes(String(error.cause.code))) {
+        throw error;
+      }
       if (error instanceof TypeError) throw new NetworkRequestError("Network request failed");
       throw error;
     }
@@ -104,5 +115,6 @@ export async function executeHttpCheck(endpoint: CheckConfiguration): Promise<Ch
     clearTimeout(timer);
     // Checks finish at response headers; abort releases the unread response body.
     controller.abort();
+    await dispatcher?.destroy();
   }
 }

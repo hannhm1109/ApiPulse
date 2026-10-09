@@ -17,6 +17,7 @@ export async function claimDueEndpoints(
   now: Date,
   limit = SCHEDULER_BATCH_SIZE,
 ): Promise<ClaimedEndpoint[]> {
+  if (!Number.isFinite(now.getTime())) throw new RangeError("Claim time must be a valid date");
   if (!Number.isInteger(limit) || limit < 1 || limit > SCHEDULER_BATCH_SIZE) {
     throw new RangeError(`Batch size must be between 1 and ${SCHEDULER_BATCH_SIZE}`);
   }

@@ -3,6 +3,8 @@ import type { PrismaClient } from "../../generated/prisma/client";
 import { CheckClaimLostError, claimDueEndpoints, releaseCheckClaim } from "./check-claims";
 import { runClaimedEndpointCheck } from "./run-endpoint-check";
 import { SCHEDULER_BATCH_SIZE, SCHEDULER_CONCURRENCY } from "./scheduler-settings";
+import { randomUUID } from "node:crypto";
+import { logServerError } from "../logging";
 
 export type SchedulerSummary = {
   claimed: number;
@@ -21,9 +23,17 @@ export async function runScheduler(
   if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > SCHEDULER_CONCURRENCY) {
     throw new RangeError(`Concurrency must be between 1 and ${SCHEDULER_CONCURRENCY}`);
   }
-  const endpoints = await claimDueEndpoints(db, options.now ?? new Date(), options.batchSize ?? SCHEDULER_BATCH_SIZE);
+  const runId = randomUUID();
+  const startedAt = performance.now();
+  console.info(JSON.stringify({ event: "scheduler_started", runId }));
+  let endpoints;
+  try {
+    endpoints = await claimDueEndpoints(db, options.now ?? new Date(), options.batchSize ?? SCHEDULER_BATCH_SIZE);
+  } catch (error) {
+    logServerError("scheduler_claim_error", error, { runId });
+    throw error;
+  }
   const summary: SchedulerSummary = { claimed: endpoints.length, success: 0, failure: 0, timeout: 0, skipped: 0, errors: 0 };
-  console.info(JSON.stringify({ event: "scheduler_started", claimed: endpoints.length }));
   let cursor = 0;
 
   await Promise.all(Array.from({ length: Math.min(concurrency, endpoints.length) }, async () => {
@@ -37,17 +47,13 @@ export async function runScheduler(
       } catch (error) {
         let skipped = error instanceof CheckClaimLostError;
         if (!skipped) {
-          console.error(JSON.stringify({
-            event: "scheduler_endpoint_error", endpointId: endpoint.id,
-            error: error instanceof Error ? error.name : "UnknownError",
-            detail: error instanceof RangeError ? error.message : undefined,
-          }));
+          logServerError("scheduler_endpoint_error", error, { endpointId: endpoint.id, runId });
         }
         try {
           await releaseCheckClaim(db, endpoint.id, endpoint.checkClaimToken);
-        } catch {
+        } catch (error) {
           skipped = false;
-          console.error(JSON.stringify({ event: "scheduler_claim_release_error", endpointId: endpoint.id }));
+          logServerError("scheduler_claim_release_error", error, { endpointId: endpoint.id, runId });
         }
         if (skipped) summary.skipped++;
         else summary.errors++;
@@ -55,6 +61,6 @@ export async function runScheduler(
     }
   }));
 
-  console.info(JSON.stringify({ event: "scheduler_finished", ...summary }));
+  console.info(JSON.stringify({ event: "scheduler_finished", runId, durationMs: Math.round(performance.now() - startedAt), ...summary }));
   return summary;
 }

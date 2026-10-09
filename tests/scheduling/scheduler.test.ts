@@ -95,4 +95,19 @@ describe("scheduler orchestration", () => {
     await expect(runScheduler(prisma, { concurrency: 6 })).rejects.toThrow(RangeError);
     expect(claimDueEndpoints).not.toHaveBeenCalled();
   });
+  it("correlates a run's logs and counts every claimed endpoint exactly once", async () => {
+    vi.mocked(claimDueEndpoints).mockResolvedValue([endpoint("up"), endpoint("internal")]);
+    vi.mocked(runClaimedEndpointCheck).mockImplementation(async item => {
+      if (item.id === "internal") throw new Error("postgresql://user:secret@internal");
+      return result(item.id, "SUCCESS");
+    });
+    const summary = await runScheduler(prisma);
+    expect(summary.claimed).toBe(summary.success + summary.failure + summary.timeout + summary.skipped + summary.errors);
+    const info = vi.mocked(console.info).mock.calls.map(([entry]) => JSON.parse(entry));
+    const errors = vi.mocked(console.error).mock.calls.map(([entry]) => JSON.parse(entry));
+    expect(info[0]).toMatchObject({ event: "scheduler_started", runId: expect.any(String) });
+    expect(info[1]).toMatchObject({ event: "scheduler_finished", runId: info[0].runId, durationMs: expect.any(Number) });
+    expect(errors[0].runId).toBe(info[0].runId);
+    expect(JSON.stringify(errors)).not.toContain("secret");
+  });
 });

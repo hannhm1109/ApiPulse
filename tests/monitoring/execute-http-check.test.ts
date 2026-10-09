@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { executeHttpCheck } from "../../server/monitoring/execute-http-check";
 import { TargetUrlError, validateTargetUrl } from "../../server/monitoring/ssrf";
+import type { ValidatedTarget } from "../../server/monitoring/ssrf";
 
 vi.mock("../../server/monitoring/ssrf", async (importOriginal) => {
   const original = await importOriginal<typeof import("../../server/monitoring/ssrf")>();
@@ -8,6 +9,7 @@ vi.mock("../../server/monitoring/ssrf", async (importOriginal) => {
 });
 
 const endpoint = { url: "https://example.com/health", expectedStatusCode: 200, timeoutMs: 1000 };
+const target = (): ValidatedTarget => ({ url: new URL(endpoint.url), address: { address: "8.8.8.8", family: 4 } });
 
 describe("executeHttpCheck", () => {
   const fetchMock = vi.fn<typeof fetch>();
@@ -16,7 +18,7 @@ describe("executeHttpCheck", () => {
     vi.useFakeTimers();
     vi.stubGlobal("fetch", fetchMock);
     fetchMock.mockReset();
-    vi.mocked(validateTargetUrl).mockReset().mockResolvedValue(new URL(endpoint.url));
+    vi.mocked(validateTargetUrl).mockReset().mockResolvedValue(target());
   });
 
   afterEach(() => {
@@ -39,6 +41,7 @@ describe("executeHttpCheck", () => {
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(fetchMock).toHaveBeenCalledWith(new URL(endpoint.url), expect.objectContaining({
       method: "GET", cache: "no-store", redirect: "manual", signal: expect.any(AbortSignal),
+      dispatcher: expect.objectContaining({ destroyed: true }),
     }));
     expect(fetchMock.mock.calls[0][1]?.signal?.aborted).toBe(true);
   });
@@ -73,6 +76,18 @@ describe("executeHttpCheck", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it.each(["UND_ERR_INVALID_ARG", "UND_ERR_INVALID_RETURN_VALUE", "UND_ERR_DESTROYED", "UND_ERR_CLOSED"])(
+    "propagates internal dispatcher error %s and still releases resources", async code => {
+      const error = new TypeError("fetch failed", { cause: Object.assign(new Error("Internal transport error"), { code }) });
+      fetchMock.mockRejectedValue(error);
+      await expect(executeHttpCheck(endpoint)).rejects.toBe(error);
+      const options = fetchMock.mock.calls[0][1] as RequestInit & { dispatcher: { destroyed: boolean } };
+      expect(options.signal?.aborted).toBe(true);
+      expect(options.dispatcher.destroyed).toBe(true);
+      expect(fetchMock).toHaveBeenCalledOnce();
+    },
+  );
+
   it("records blocked targets without attempting HTTP", async () => {
     vi.mocked(validateTargetUrl).mockRejectedValue(new TargetUrlError("Local targets are not allowed"));
     expect(await executeHttpCheck(endpoint)).toMatchObject({
@@ -96,12 +111,12 @@ describe("executeHttpCheck", () => {
   });
 
   it("times out DNS and prevents a late lookup from starting HTTP", async () => {
-    let completeLookup!: (url: URL) => void;
+    let completeLookup!: (target: ValidatedTarget) => void;
     vi.mocked(validateTargetUrl).mockImplementation(() => new Promise(resolve => { completeLookup = resolve; }));
     const check = executeHttpCheck(endpoint);
     await vi.advanceTimersByTimeAsync(1000);
     expect(await check).toMatchObject({ status: "TIMEOUT", statusCode: null });
-    completeLookup(new URL(endpoint.url));
+    completeLookup(target());
     await vi.advanceTimersByTimeAsync(0);
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -112,7 +127,7 @@ describe("executeHttpCheck", () => {
     await expect(executeHttpCheck(endpoint)).rejects.toBe(error);
   });
 
-  it.each([0, -1, 1.5, NaN, Infinity, 2_147_483_648])("rejects invalid timeout %s before HTTP", async timeoutMs => {
+  it.each([0, -1, 1.5, NaN, Infinity, 30_001, 2_147_483_648])("rejects invalid timeout %s before HTTP", async timeoutMs => {
     await expect(executeHttpCheck({ ...endpoint, timeoutMs })).rejects.toThrow(RangeError);
     expect(fetchMock).not.toHaveBeenCalled();
   });

@@ -27,12 +27,12 @@ export async function persistCheckResult(
       throw new CheckClaimLostError();
     }
 
+    const result = await tx.checkResult.create({ data: { endpointId, ...outcome } });
     const latestCheck = await tx.checkResult.findFirst({
       where: { endpointId },
-      orderBy: { checkedAt: "desc" },
-      select: { checkedAt: true },
+      orderBy: [{ checkedAt: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+      select: { id: true },
     });
-    const result = await tx.checkResult.create({ data: { endpointId, ...outcome } });
 
     await tx.endpoint.update({
       where: { id: endpointId },
@@ -44,7 +44,8 @@ export async function persistCheckResult(
       },
     });
 
-    if (!latestCheck || outcome.checkedAt >= latestCheck.checkedAt) {
+    // Use the same tie-breakers as dashboard/detail, even if concurrent transaction clocks finish out of order.
+    if (latestCheck?.id === result.id) {
       await processIncidentState(tx, result);
     }
 

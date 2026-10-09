@@ -3,11 +3,12 @@ import { Plus } from "lucide-react";
 import { prisma } from "../server/db/prisma";
 import { listEndpoints } from "../server/endpoints/endpoint-service";
 import { EndpointList } from "../components/endpoints/endpoint-list";
+import { loadPageData } from "../server/page-data";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const endpoints = await listEndpoints(prisma);
+  const endpoints = await loadPageData("endpoint_list_read_error", () => listEndpoints(prisma));
   return (
     <main className="page-container" id="main-content">
       <div className="page-heading"><div className="heading-with-count"><h1>Endpoints</h1><span className="heading-count">{endpoints.length}</span></div>

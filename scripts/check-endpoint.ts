@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { createPrismaClient } from "../server/db/client";
 import { runEndpointCheck } from "../server/monitoring/run-endpoint-check";
+import { logServerError } from "../server/logging";
 
 async function main() {
   const [endpointId, ...extra] = process.argv.slice(2);
@@ -21,6 +22,6 @@ async function main() {
 }
 
 main().catch((error: unknown) => {
-  console.error("Check execution failed:", error);
+  logServerError("manual_check_error", error);
   process.exitCode = 1;
 });

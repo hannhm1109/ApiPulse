@@ -2,6 +2,7 @@ import "dotenv/config";
 import { setTimeout as delay } from "node:timers/promises";
 import { createPrismaClient } from "../server/db/client";
 import { runScheduler } from "../server/monitoring/scheduler";
+import { logServerError } from "../server/logging";
 
 async function main() {
   const args = process.argv.slice(2);
@@ -19,7 +20,7 @@ async function main() {
         const result = await runScheduler(db);
         if (!watch && result.errors) process.exitCode = 1;
       } catch (error) {
-        console.error("Scheduler execution failed:", error);
+        logServerError("scheduler_runner_tick_error", error);
         if (!watch) process.exitCode = 1;
       }
       if (!watch || stop.signal.aborted) break;
@@ -37,6 +38,6 @@ async function main() {
 }
 
 main().catch((error: unknown) => {
-  console.error("Scheduler runner failed:", error);
+  logServerError("scheduler_runner_error", error);
   process.exitCode = 1;
 });

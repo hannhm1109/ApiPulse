@@ -4,13 +4,14 @@ import { ArrowLeft } from "lucide-react";
 import { prisma } from "../../../../server/db/prisma";
 import { getEndpoint } from "../../../../server/endpoints/endpoint-service";
 import { EndpointForm } from "../../../../components/endpoints/endpoint-form";
+import { loadPageData } from "../../../../server/page-data";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Edit endpoint | API Pulse" };
 
 export default async function EditEndpoint({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const endpoint = await getEndpoint(prisma, id);
+  const endpoint = await loadPageData("endpoint_settings_read_error", () => getEndpoint(prisma, id));
   if (!endpoint) notFound();
   return (
     <main className="page-container form-page" id="main-content">

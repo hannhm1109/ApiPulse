@@ -77,6 +77,12 @@ describe("scheduling claims in PostgreSQL", () => {
     expect(await db.checkResult.count({ where: { endpointId: original.id } })).toBe(0);
   });
 
+  it("rejects an invalid claim clock before querying PostgreSQL", async () => {
+    const query = vi.spyOn(db, "$queryRaw");
+    await expect(claimDueEndpoints(db, new Date(NaN))).rejects.toThrow(RangeError);
+    expect(query).not.toHaveBeenCalled();
+  });
+
   it("a scheduled result atomically clears its lease and prevents an immediate duplicate run", async () => {
     await create("record");
     const [claim] = await claimDueEndpoints(db, new Date());

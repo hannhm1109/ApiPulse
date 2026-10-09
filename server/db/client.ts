@@ -12,6 +12,10 @@ export function createPrismaClient() {
     connectionString,
     max: 5,
     connectionTimeoutMillis: 5000,
+    statement_timeout: 10_000,
+    lock_timeout: 3000,
+    idle_in_transaction_session_timeout: 10_000,
+    application_name: "api-pulse",
   });
 
   return new PrismaClient({ adapter });

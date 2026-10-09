@@ -123,13 +123,29 @@ describe("incident lifecycle in PostgreSQL", () => {
     expect(await incidents()).toEqual([open]);
   });
 
-  it("checks with equal timestamps use their serialized persistence order", async () => {
+  it("checks with equal timestamps follow the latest-result display ordering", async () => {
     await save("FAILURE", 0);
     const recovery = await save("SUCCESS", 0);
     expect(await incidents()).toEqual([expect.objectContaining({
       status: "RESOLVED", resolvedAt: atMinute(0), recoveryCheckId: recovery.id,
     })]);
   });
+
+  it.each(["SUCCESS", "FAILURE"] as const)(
+    "an equal-time check with an older creation timestamp cannot override the latest %s", async status => {
+      const prior = await save(status, 0);
+      // PostgreSQL defaults use transaction start, not the order a waiting transaction commits.
+      await db.checkResult.update({ where: { id: prior.id }, data: { createdAt: new Date(Date.now() + 60_000) } });
+      const originalIncidents = await incidents();
+      await save(status === "SUCCESS" ? "FAILURE" : "SUCCESS", 0);
+      expect(await incidents()).toEqual(originalIncidents);
+      const latest = await db.checkResult.findFirstOrThrow({
+        where: { endpointId }, orderBy: [{ checkedAt: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+      });
+      expect(latest.id).toBe(prior.id);
+      expect(await db.checkResult.count({ where: { endpointId } })).toBe(2);
+    },
+  );
 
   it("uses a fallback cause if a failed observation has no reason", async () => {
     await persistCheckResult(db, endpointId, { ...outcome("FAILURE", 0), failureReason: null });

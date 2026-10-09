@@ -38,8 +38,17 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "server-only": "^0.0.1",
+    "undici": "7.30.0",
     "uplot": "1.6.32",
     "zod": "4.6.5"
+  },
+  "overrides": {
+    "@prisma/config": {
+      "deepmerge-ts": "8.0.2"
+    },
+    "prisma": {
+      "mysql2": "3.24.5"
+    }
   },
   "devDependencies": {
     "@playwright/test": "1.64.0",

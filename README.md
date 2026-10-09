@@ -2,7 +2,7 @@
 
 API Pulse periodically checks HTTP endpoints and tracks uptime, latency, incidents, and recoveries.
 
-Current phase: endpoint detail and historical metrics.
+Current phase: production hardening (trusted-local operation; deployment is next).
 
 - [Phase 0: Architecture](docs/phase-0-architecture.md)
 - [Phase 1: Project and database foundation](docs/phase-1-foundation.md)
@@ -12,6 +12,7 @@ Current phase: endpoint detail and historical metrics.
 - [Phase 5: Endpoint management](docs/phase-5-endpoint-management.md)
 - [Phase 6: Dashboard](docs/phase-6-dashboard.md)
 - [Phase 7: Endpoint detail](docs/phase-7-endpoint-detail.md)
+- [Phase 8: Production hardening](docs/phase-8-hardening.md)
 
 ## Stack
 
@@ -82,14 +83,16 @@ npm run check:endpoint -- YOUR_ENDPOINT_ID
 
 The command executes one GET request, evaluates the configured status, and
 saves a CheckResult, updates `lastCheckedAt`, and processes incidents in one transaction.
-It enforces a timeout, disables caching and redirects, and applies initial
-URL/IP guardrails. Latency measures time from check start to response headers,
+It enforces a timeout, disables caching and redirects, validates all resolved
+addresses, and pins one public address to the connection without a second DNS
+lookup. Latency measures time from check start to response headers,
 including DNS validation. Response bodies are not inspected.
 
 The JSON output can report SUCCESS, FAILURE, or TIMEOUT. A recorded target
 failure is a successful monitoring operation; an internal execution or
 database error causes a nonzero command exit. See the
-[Phase 2 guide](docs/phase-2-monitoring.md) for HTTP details and SSRF limitations.
+[Phase 2 guide](docs/phase-2-monitoring.md) for HTTP details and the
+[Phase 8 guide](docs/phase-8-hardening.md) for current SSRF protections and limitations.
 
 ## Endpoint Management
 
@@ -199,6 +202,8 @@ npm run db:validate
 npm run lint
 npm run typecheck
 npm run build
+npm audit --omit=dev
+npm audit
 ```
 
 Database checks additionally require a running PostgreSQL instance. See the
@@ -217,7 +222,29 @@ npx playwright install chromium
 npm run test:ui
 ```
 
-Do not seed the browser test database. These tests start their own production
-server on localhost port 3100 and stop it afterward. They must not run alongside
-other tests or a scheduler using the same test database.
+Do not seed the browser test database. Tests refuse an identical normal/test
+database host, port and name, even when credentials/options differ. This guard
+cannot detect different hostnames pointing to the same server; you remain
+responsible for selecting a dedicated database.
+
+Browser tests start production servers on localhost ports 3100 and 3101 and
+stop both afterward. Port 3101 intentionally uses an unreachable database to
+verify generic errors and retry behavior without stopping your regular app or
+database. Do not run browser and database suites concurrently or run a scheduler
+against their database.
+
+## Hardening Status
+
+Phase 8 adds connection-pinned SSRF checks, bounded PostgreSQL waits, consistent
+incident/result ordering, redacted structured logs, and basic browser security
+headers. Loading, empty, error, scheduler-failure, and history paths have
+automated regression coverage. See the [Phase 8 guide](docs/phase-8-hardening.md)
+for exact verification steps and interview concepts.
+
+The production dependency audit reports zero findings at verification time.
+The full audit still reports five high-severity findings in the development-only
+lint dependency chain rooted in `braces`. Do not apply the suggested forced
+Next.js lint downgrade blindly. No authentication, hosting, public demo, or
+deployment configuration was activated in this phase. Public access protection
+and outbound-network restrictions remain prerequisites before publishing.
 
