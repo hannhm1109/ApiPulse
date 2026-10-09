@@ -2,7 +2,7 @@
 
 HTTP endpoint monitoring with recorded checks, response latency, and incident recovery. Built to make the backend lifecycle as clear as the interface.
 
-**[Live Demo](https://api-pulse-eight.vercel.app/dashboard)** | [Architecture](docs/architecture.md) | [Interview Guide](docs/interview-guide.md) | [Deployment](docs/phase-9-deployment.md)
+**[Live Demo](https://api-pulse-eight.vercel.app/dashboard)** | [Architecture](docs/architecture.md) | [Deployment](docs/phase-9-deployment.md)
 
 ![API Pulse dashboard with health states, response timings, check history, and active incidents](docs/images/dashboard.png)
 
@@ -128,7 +128,6 @@ The last production dependency audit had zero findings; the full audit had five 
 ## Engineering Notes
 
 - [Architecture and concurrency guarantees](docs/architecture.md)
-- [Interview explanation and demo walkthrough](docs/interview-guide.md)
 - [Phase 10: Portfolio assets and repository metadata](docs/phase-10-portfolio.md)
 - [Interface design](docs/interface-design.md)
 - [Deployment and operations](docs/phase-9-deployment.md)

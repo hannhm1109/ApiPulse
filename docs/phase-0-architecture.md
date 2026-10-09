@@ -302,22 +302,7 @@ CRUD would only create and display endpoints. API Pulse becomes a real engineeri
 
 The main product value lives in the monitoring lifecycle, not in forms and tables.
 
-## 14. Interview Understanding After Phase 0
-
-You should be able to explain:
-
-- Why endpoint monitoring needs stored history.
-- Why every failed check should not create a new incident.
-- How a check becomes a result, and how a result affects incident state.
-- Why check-based uptime differs from continuous uptime.
-- How the scheduler finds due endpoints.
-- What can go wrong if the scheduler runs twice.
-- Why request timeouts are mandatory.
-- Why one failed endpoint should not crash the whole scheduler.
-- What SSRF is and why monitoring tools are exposed to it.
-- Why this MVP does not need Redis, queues, Kafka, Kubernetes, or multi-region workers yet.
-
-## 15. Phase 1 Readiness
+## 14. Phase 1 Readiness
 
 Phase 1 should create the project foundation, Prisma setup, PostgreSQL configuration, initial schema, migration, and seed data. It should not implement the scheduler or monitoring engine yet.
 

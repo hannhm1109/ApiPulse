@@ -258,21 +258,4 @@ public smoke were subsequently verified. Scheduled workflow execution and a full
 production incident/recovery cycle remain unverified. Portfolio verification is
 recorded in [Phase 10](phase-10-portfolio.md).
 
-## Interview Concepts
-
-- **Access protection vs authentication:** a public demo disables writes entirely;
-  it does not pretend a hidden Edit button authenticates visitors. Actions and
-  services enforce the same restriction, independently of UI controls.
-- **Serverless state:** no in-process timer or mutable demo failure toggle. PostgreSQL
-  owns claims/history; UTC determines the demo cycle; an external timer triggers work.
-- **Pooling:** a per-instance pool is not a global budget. Transaction pooling
-  changes session semantics, so deadline guarantees belong at the database role.
-- **Release discipline:** migrations run explicitly over a direct connection,
-  separate from builds and previews. Repeated deployments do not reset history.
-- **Monitoring semantics:** an HTTP 503 is an observation, not a scheduler failure.
-  Simulated target behavior is disclosed; check-based uptime still comes from real
-  attempts and is not continuous availability or an SLA.
-- **Scheduling trade-off:** a best-effort five-minute timer is sufficient to
-  demonstrate due logic and recovery, but missed/delayed samples limit accuracy.
-
 Next: [Phase 10 portfolio presentation](phase-10-portfolio.md).

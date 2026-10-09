@@ -6,7 +6,6 @@
 - A current [architecture guide](architecture.md), separate from the historical Phase 0 proposal.
 - Architecture and monitoring lifecycle diagrams in editable Mermaid, SVG, and PNG formats.
 - Desktop dashboard, desktop endpoint detail, and mobile latency screenshots of the redesigned interface.
-- A concise [interview guide](interview-guide.md): problem, architecture, hardest problem, trade-offs, scaling strategy, and a 90-second walkthrough.
 - Published GitHub description, homepage, and topics.
 
 This phase changes documentation and presentation assets, not application behavior. The only browser-test change adds a mobile screenshot to an existing populated-history test.
@@ -40,7 +39,7 @@ node scripts/collect-screenshots.mjs
 
 The collector refuses a failed run or ambiguous/missing files. Inspect all three images before committing. Captures represent the implementation at that run, not current production counts.
 
-A looping GIF is deliberately omitted: readable static screenshots and a short walkthrough make the chart and engineering story easier to inspect without adding a large media artifact. A recording can be added later, with the same fixture disclosure.
+A looping GIF is deliberately omitted: readable static screenshots make the chart and interface easier to inspect without adding a large media artifact. A recording can be added later, with the same fixture disclosure.
 
 ## Diagrams
 
@@ -78,6 +77,6 @@ Database and browser suites run sequentially, not against production. Historical
 
 ## Handoff
 
-Use the README as the repository entry point and the interview guide as the speaking outline. Next operational step: activate the opt-in timer and verify a real failure/recovery cycle when ready. That is distinct from completing portfolio assets.
+Use the README as the repository entry point. Next operational step: activate the opt-in timer and verify a real failure/recovery cycle when ready. That is distinct from completing portfolio assets.
 
 Stop after this phase; no additional product features or infrastructure changes are included.
