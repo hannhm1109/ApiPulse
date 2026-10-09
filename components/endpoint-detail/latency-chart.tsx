@@ -24,14 +24,14 @@ export function LatencyChart({ checks }: { checks: DashboardCheck[] }) {
       legend: { show: true },
       scales: { y: { range: (_chart, _min, max) => [0, Math.max(10, (max ?? 0) * 1.15)] } },
       axes: [
-        { stroke: "#697378", grid: { show: false }, font: "11px Arial", space: 90 },
-        { stroke: "#697378", grid: { stroke: "#e2e6e8", width: 1 }, font: "11px Arial", size: 54,
+        { stroke: "#697079", grid: { show: false }, font: "11px sans-serif", space: 90 },
+        { stroke: "#697079", grid: { stroke: "#e1e3e8", width: 1 }, font: "11px sans-serif", size: 54,
           values: (_chart, values) => values.map(value => `${value} ms`) },
       ],
       series: [
         { label: "UTC", value: (_chart, value) => value == null ? "--" : utcDateTime(new Date(value * 1000).toISOString()) },
-        { label: "Response", stroke: "#365f91", width: 2, spanGaps: false,
-          points: { show: true, size: 5, fill: "#365f91" }, value: (_chart, value) => value == null ? "--" : `${value} ms` },
+        { label: "Response", stroke: "#4163dc", width: 2, spanGaps: false,
+          points: { show: true, size: 5, fill: "#4163dc" }, value: (_chart, value) => value == null ? "--" : `${value} ms` },
       ],
     }, latencySeries(checks), host);
     const observer = new ResizeObserver(() => chart.setSize({ width: Math.max(240, host.clientWidth), height: 260 }));

@@ -159,6 +159,48 @@ test("single and tied observations do not fabricate a continuous chart", async (
   await expect(metric(page, "Check-based uptime")).toHaveText("100.00%");
 });
 
+test("copy endpoint URL reports both clipboard success and denial without changing data", async ({ page }) => {
+  const endpoint = await create("clipboard");
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: {
+      writeText: async (value: string) => { document.documentElement.dataset.copiedUrl = value; },
+    } });
+  });
+  await page.goto(`/endpoints/${endpoint.id}`);
+  await page.getByRole("button", { name: "Copy endpoint URL" }).click();
+  await expect(page.getByRole("status")).toHaveText("URL copied");
+  expect(await page.evaluate(() => document.documentElement.dataset.copiedUrl)).toBe(endpoint.url);
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: {
+      writeText: async () => { throw new Error("Clipboard denied"); },
+    } });
+  });
+  await page.getByRole("button", { name: "Copy endpoint URL" }).click();
+  await expect(page.getByRole("status")).toHaveText("Could not copy URL");
+  expect(await db.checkResult.count({ where: { endpointId: endpoint.id } })).toBe(0);
+});
+
+test("section shortcuts preserve the selected period and land below sticky navigation", async ({ page }) => {
+  const endpoint = await historyFixture();
+  await page.goto(`/endpoints/${endpoint.id}?period=24h`);
+  const sections = page.getByRole("navigation", { name: "Endpoint sections" });
+  for (const [label, hash] of [["Latency", "latency"], ["Checks", "checks"], ["Overview", "overview"]]) {
+    await sections.getByRole("link", { name: label, exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`period=24h#${hash}$`));
+    const target = await page.locator(`#${hash}`).boundingBox();
+    const nav = await sections.boundingBox();
+    expect(target!.y).toBeGreaterThanOrEqual(nav!.y + nav!.height - 1);
+  }
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  const mainNav = page.getByRole("navigation", { name: "Main navigation" });
+  const bounds = await mainNav.boundingBox();
+  expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(700);
+  expect(bounds!.y).toBeGreaterThan(600);
+  await mainNav.getByRole("link", { name: "Endpoints", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Endpoints", exact: true })).toBeVisible();
+});
+
 test("incident pages preserve an open incident independently of the page", async ({ page }) => {
   const endpoint = await create("incident-pages", { enabled: false });
   const reference = Date.now() - 60_000;

@@ -117,12 +117,16 @@ test("long names and URLs fit on narrow and intermediate widths", async ({ page 
     await page.goto("/");
     await expect(page.getByRole("switch")).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect(await page.locator(".endpoint-url").evaluate(element => element.getBoundingClientRect().height)).toBeLessThan(40);
+    await expect(page.locator(".endpoint-url")).toHaveAttribute("title", "https://api.example.com/" + "x".repeat(1800));
     const identity = await page.locator(".endpoint-identity").boundingBox();
     const monitoring = await page.locator(".monitoring-toggle").boundingBox();
-    if (width >= 761) {
-      expect(identity).not.toBeNull();
-      expect(monitoring).not.toBeNull();
+    expect(identity).not.toBeNull();
+    expect(monitoring).not.toBeNull();
+    if (monitoring!.y < identity!.y + identity!.height) {
       expect(identity!.x + identity!.width).toBeLessThanOrEqual(monitoring!.x);
+    } else {
+      expect(monitoring!.y).toBeGreaterThanOrEqual(identity!.y + identity!.height);
     }
   }
 });

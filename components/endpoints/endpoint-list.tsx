@@ -37,13 +37,13 @@ export function EndpointList({ endpoints, readOnly }: { endpoints: EndpointListI
           </span>
         </div>
       </div>
-      {filtered.length ? <table className="endpoint-table">
+      {filtered.length ? <table className={`endpoint-table${readOnly ? "" : " has-actions"}`}>
         <caption className="sr-only">Monitored endpoint configuration</caption>
         <thead><tr><th scope="col">Endpoint</th><th scope="col">Expected</th><th scope="col">Timeout</th><th scope="col">Interval</th><th scope="col">Monitoring</th>{!readOnly && <th scope="col"><span className="sr-only">Actions</span></th>}</tr></thead>
         <tbody>{filtered.map(endpoint => <tr key={endpoint.id}>
           <th scope="row" className="endpoint-identity">
             <div className="endpoint-name-line"><span className="method-badge">GET</span><Link href={`/endpoints/${endpoint.id}`} className="endpoint-name">{endpoint.name}</Link></div>
-            <span className="endpoint-url mono">{endpoint.url}</span>
+            <span className="endpoint-url mono" title={endpoint.url}>{endpoint.url}</span>
           </th>
           <td><span className="mobile-label">Expected</span><span className="status-code mono">{endpoint.expectedStatusCode}</span></td>
           <td><span className="mobile-label">Timeout</span><span className="numeric">{endpoint.timeoutMs.toLocaleString("en-US")}</span> <span className="muted">ms</span></td>

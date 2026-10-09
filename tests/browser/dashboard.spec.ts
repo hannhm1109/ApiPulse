@@ -97,6 +97,24 @@ test("search and status filters narrow rows without changing workspace counts", 
   await expect(page.locator(".dashboard-table tbody tr")).toHaveCount(8);
 });
 
+test("health distribution reflects all stored states and shortcuts share the table filter", async ({ page }) => {
+  await mixedFixtures();
+  await page.goto("/dashboard");
+  const distribution = page.getByRole("img", { name: /^Endpoint distribution:/ });
+  await expect(distribution).toHaveAttribute("aria-label", "Endpoint distribution: 1 Up, 2 Down, 1 Pending, 1 Stale, 2 Disabled, 1 Unknown");
+  expect(await distribution.locator("span").evaluateAll(elements => elements.map(element => getComputedStyle(element).flexGrow))).toEqual(["1", "2", "1", "1", "2", "1"]);
+  const down = page.getByRole("button", { name: "2 down", exact: true });
+  await down.click();
+  await expect(down).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByLabel("Filter endpoint health")).toHaveValue("DOWN");
+  await expect(page.locator(".dashboard-table tbody tr")).toHaveCount(2);
+  await page.getByLabel("Filter endpoint health").selectOption("UP");
+  await expect(page.getByRole("button", { name: "1 healthy", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "All endpoints", exact: true }).click();
+  await expect(page.locator(".dashboard-table tbody tr")).toHaveCount(8);
+  await expect(metric(page, "Total endpoints")).toHaveText("8");
+});
+
 test("refresh shows recovery from new persisted data without executing checks", async ({ page }) => {
   const endpoint = await fixture("recover", "Recovering API", "FAILURE");
   await page.goto("/dashboard");

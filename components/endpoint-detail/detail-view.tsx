@@ -7,6 +7,7 @@ import { HealthBadge } from "../health-badge";
 import { LatencyChart } from "./latency-chart";
 import { RefreshDetail } from "./refresh-detail";
 import { HistoryPagination } from "./history-pagination";
+import { CopyUrl } from "./copy-url";
 
 const milliseconds = (value: number | null) => value == null ? "--" : `${Math.round(value).toLocaleString("en-US")} ms`;
 
@@ -18,7 +19,7 @@ export function DetailView({ data, readOnly }: { data: EndpointDetailData; readO
       <div className="detail-identity"><div className="detail-title"><h1>{endpoint.name}</h1><HealthBadge health={data.health} /></div>
         <p className="detail-url mono"><span className="method-badge">GET</span>{endpoint.url}</p></div>
       <div className="detail-actions"><time className="snapshot-time muted" dateTime={data.generatedAt} title={data.generatedAt}>Updated {utcTime(data.generatedAt)} UTC</time>
-        <RefreshDetail />{!readOnly && <Link href={`/endpoints/${endpoint.id}/edit`} className="button button-secondary"><Settings2 size={16} aria-hidden="true" />Settings</Link>}
+        <CopyUrl url={endpoint.url} /><RefreshDetail />{!readOnly && <Link href={`/endpoints/${endpoint.id}/edit`} className="button button-secondary"><Settings2 size={16} aria-hidden="true" />Settings</Link>}
       </div>
     </div>
     <div className="detail-configuration"><span>Expected <strong>{endpoint.expectedStatusCode}</strong></span><span>Timeout <strong>{endpoint.timeoutMs.toLocaleString("en-US")} ms</strong></span>
@@ -27,7 +28,9 @@ export function DetailView({ data, readOnly }: { data: EndpointDetailData; readO
       <div><strong>Incident open</strong><p>{data.activeIncident.cause}</p></div>
       <span>{data.activeIncident.durationMs == null ? "--" : formatDuration(data.activeIncident.durationMs)}</span></div>}
 
-    <div className="detail-period-bar"><h2>Health overview</h2>
+    <nav className="detail-jump-nav" aria-label="Endpoint sections"><a href="#overview">Overview</a><a href="#latency">Latency</a><a href="#checks">Checks</a><a href="#incidents">Incidents</a></nav>
+
+    <div className="detail-period-bar" id="overview"><h2>Health overview</h2>
       <nav className="period-control" aria-label="History period">{(Object.keys(periodLabels) as HistoryPeriod[]).map(period =>
         <Link key={period} href={detailHref(endpoint.id, { period, checkPage: 1, incidentPage: 1 })} aria-current={options.period === period ? "true" : undefined}>
           {periodLabels[period]}</Link>)}</nav>
@@ -43,7 +46,7 @@ export function DetailView({ data, readOnly }: { data: EndpointDetailData; readO
     <div className="observation-counts detail-check-counts"><span>{metrics.total.toLocaleString("en-US")} completed checks</span><span>{metrics.successful.toLocaleString("en-US")} successful</span>
       <span>{metrics.failed.toLocaleString("en-US")} failed</span><span>{metrics.timedOut.toLocaleString("en-US")} timed out</span></div>
 
-    <section className="dashboard-section" aria-labelledby="latency-heading"><div className="section-heading detail-section-heading"><h2 id="latency-heading">Latency history</h2>
+    <section className="dashboard-section" id="latency" aria-labelledby="latency-heading"><div className="section-heading detail-section-heading"><h2 id="latency-heading">Latency history</h2>
       <span className="muted">Latest {data.chartChecks.length} checks</span></div><LatencyChart checks={data.chartChecks} /></section>
 
     <section className="dashboard-section" id="checks" aria-labelledby="checks-heading"><div className="section-heading detail-section-heading"><h2 id="checks-heading">Check history</h2>
